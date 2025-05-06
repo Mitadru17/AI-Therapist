@@ -1,9 +1,8 @@
 # Gunicorn configuration file for Render deployment
 import os
 
-# Use PORT environment variable with fallback to 10000
-port = os.environ.get("PORT", "10000")
-bind = f"0.0.0.0:{port}"
+# Bind directly to port 3000 for Render deployment
+bind = "0.0.0.0:3000"
 
 workers = 4
 threads = 2
