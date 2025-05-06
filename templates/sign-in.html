@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AI Therapist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1><i class="fas fa-brain"></i> AI Therapist</h1>
+                <p>Sign in to continue your therapy journey</p>
+            </div>
+            
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            
+            <!-- Simple sign-in form -->
+            <div class="auth-form">
+                <form id="signin-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="auth-button">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </button>
+                </form>
+                <div id="loading" class="loading-indicator" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Signing in...
+                </div>
+                
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+                
+                <button id="google-signin" class="social-auth-button google-button">
+                    <i class="fab fa-google"></i> Continue with Google
+                </button>
+            </div>
+            
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/sign-up">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .auth-form {
+            padding: 20px 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(91, 110, 245, 0.1);
+        }
+        
+        .auth-button {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            background-color: var(--primary-color, #5B6EF5);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin: 10px 0;
+        }
+        
+        .auth-button:hover {
+            background-color: var(--primary-dark, #4557E2);
+        }
+        
+        .loading-indicator {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-light);
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .divider span {
+            padding: 0 10px;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .social-auth-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px 20px;
+            background-color: white;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin: 10px 0;
+        }
+        
+        .social-auth-button i {
+            margin-right: 10px;
+        }
+        
+        .google-button:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .google-button i {
+            color: #4285F4;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const signinForm = document.getElementById('signin-form');
+            const googleSignInButton = document.getElementById('google-signin');
+            const loadingIndicator = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyD3o-K0laghfbJNA11ubUhbHV7hNDNx8Cg",
+                authDomain: "ai-therapist-30c16.firebaseapp.com",
+                projectId: "ai-therapist-30c16",
+                storageBucket: "ai-therapist-30c16.appspot.com",
+                messagingSenderId: "359622442079",
+                appId: "1:359622442079:web:ebba5c45af2b46a9a69a35"
+            };
+            
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            
+            // Check if user is already signed in
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    // User is signed in, redirect to home page
+                    createSessionCookie(user);
+                }
+            });
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                loadingIndicator.style.display = 'none';
+            }
+            
+            function showLoading() {
+                loadingIndicator.style.display = 'block';
+                errorMessage.style.display = 'none';
+            }
+            
+            // Create a session cookie
+            async function createSessionCookie(user) {
+                try {
+                    // Get ID token from Firebase User
+                    const idToken = await user.getIdToken(true);
+                    
+                    // Set the session cookie and redirect
+                    document.cookie = `__session=${idToken}; path=/; max-age=604800; SameSite=Lax`;
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Error creating session:', error);
+                    showError('Failed to create session. Please try again.');
+                }
+            }
+            
+            // Email/Password Sign In
+            signinForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                showLoading();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                try {
+                    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                    await createSessionCookie(userCredential.user);
+                } catch (error) {
+                    console.error('Sign-in error:', error);
+                    let errorMsg = 'Failed to sign in. Please check your credentials.';
+                    
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                        errorMsg = 'Invalid email or password.';
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMsg = 'Too many failed login attempts. Please try again later.';
+                    }
+                    
+                    showError(errorMsg);
+                }
+            });
+            
+            // Google Sign In
+            googleSignInButton.addEventListener('click', async function() {
+                showLoading();
+                
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    const userCredential = await firebase.auth().signInWithPopup(provider);
+                    await createSessionCookie(userCredential.user);
+                } catch (error) {
+                    console.error('Google sign-in error:', error);
+                    showError('Failed to sign in with Google. Please try again.');
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
