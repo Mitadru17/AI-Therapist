@@ -1109,7 +1109,7 @@ def check_session():
 
 if __name__ == '__main__':
     # Get port from environment variable or use default
-    port = int(os.environ.get("PORT", 3001))
+    port = int(os.environ.get("PORT", 3000))
     
     # Run app with host set to 0.0.0.0 to be accessible from the outside
     app.run(host='0.0.0.0', port=port, debug=True) 
