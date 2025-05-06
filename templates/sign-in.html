@@ -37,7 +37,15 @@
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <div class="password-input-container">
+                            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="forgot-password">
+                            <a href="#" id="forgotPassword">Forgot password?</a>
+                        </div>
                     </div>
                     <button type="submit" class="auth-button">
                         <i class="fas fa-sign-in-alt"></i> Sign In
@@ -46,14 +54,6 @@
                 <div id="loading" class="loading-indicator" style="display: none;">
                     <i class="fas fa-spinner fa-spin"></i> Signing in...
                 </div>
-                
-                <div class="divider">
-                    <span>OR</span>
-                </div>
-                
-                <button id="google-signin" class="social-auth-button google-button">
-                    <i class="fab fa-google"></i> Continue with Google
-                </button>
             </div>
             
             <div class="auth-footer">
@@ -166,14 +166,54 @@
         .google-button i {
             color: #4285F4;
         }
+        
+        .password-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 0;
+            font-size: 16px;
+        }
+        
+        .toggle-password:hover {
+            color: var(--primary-color);
+        }
+        
+        .forgot-password {
+            text-align: right;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .forgot-password a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const signinForm = document.getElementById('signin-form');
-            const googleSignInButton = document.getElementById('google-signin');
             const loadingIndicator = document.getElementById('loading');
             const errorMessage = document.getElementById('error-message');
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const forgotPassword = document.getElementById('forgotPassword');
             
             // Initialize Firebase
             const firebaseConfig = {
@@ -205,6 +245,10 @@
             function showLoading() {
                 loadingIndicator.style.display = 'block';
                 errorMessage.style.display = 'none';
+            }
+            
+            function hideLoading() {
+                loadingIndicator.style.display = 'none';
             }
             
             // Create a session cookie
@@ -248,18 +292,35 @@
                 }
             });
             
-            // Google Sign In
-            googleSignInButton.addEventListener('click', async function() {
+            // Password visibility toggle
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('fa-eye');
+                this.querySelector('i').classList.toggle('fa-eye-slash');
+            });
+            
+            // Forgot password functionality
+            forgotPassword.addEventListener('click', function(e) {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                
+                if (!email) {
+                    showError('Please enter your email address to reset your password');
+                    return;
+                }
+                
                 showLoading();
                 
-                try {
-                    const provider = new firebase.auth.GoogleAuthProvider();
-                    const userCredential = await firebase.auth().signInWithPopup(provider);
-                    await createSessionCookie(userCredential.user);
-                } catch (error) {
-                    console.error('Google sign-in error:', error);
-                    showError('Failed to sign in with Google. Please try again.');
-                }
+                firebase.auth().sendPasswordResetEmail(email)
+                    .then(() => {
+                        hideLoading();
+                        alert('Password reset email sent! Check your inbox.');
+                    })
+                    .catch((error) => {
+                        console.error('Error sending password reset email:', error);
+                        showError('Error sending password reset email: ' + error.message);
+                    });
             });
         });
     </script>

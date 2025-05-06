@@ -41,7 +41,12 @@
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" placeholder="Create a password (min. 6 characters)" required>
+                        <div class="password-input-container">
+                            <input type="password" id="password" name="password" placeholder="Create a password (min. 6 characters)" required>
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="auth-button">
                         <i class="fas fa-user-plus"></i> Sign Up
@@ -50,14 +55,6 @@
                 <div id="loading" class="loading-indicator" style="display: none;">
                     <i class="fas fa-spinner fa-spin"></i> Creating your account...
                 </div>
-                
-                <div class="divider">
-                    <span>OR</span>
-                </div>
-                
-                <button id="google-signup" class="social-auth-button google-button">
-                    <i class="fab fa-google"></i> Continue with Google
-                </button>
             </div>
             
             <div class="auth-footer">
@@ -170,14 +167,38 @@
         .google-button i {
             color: #4285F4;
         }
+        
+        .password-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 0;
+            font-size: 16px;
+        }
+        
+        .toggle-password:hover {
+            color: var(--primary-color);
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const signupForm = document.getElementById('signup-form');
-            const googleSignUpButton = document.getElementById('google-signup');
             const loadingIndicator = document.getElementById('loading');
             const errorMessage = document.getElementById('error-message');
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
             
             // Initialize Firebase
             const firebaseConfig = {
@@ -275,18 +296,12 @@
                 }
             });
             
-            // Google Sign Up
-            googleSignUpButton.addEventListener('click', async function() {
-                showLoading();
-                
-                try {
-                    const provider = new firebase.auth.GoogleAuthProvider();
-                    const userCredential = await firebase.auth().signInWithPopup(provider);
-                    await createSessionCookie(userCredential.user);
-                } catch (error) {
-                    console.error('Google sign-up error:', error);
-                    showError('Failed to sign up with Google. Please try again.');
-                }
+            // Password visibility toggle
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('fa-eye');
+                this.querySelector('i').classList.toggle('fa-eye-slash');
             });
         });
     </script>
