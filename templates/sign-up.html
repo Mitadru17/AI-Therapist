@@ -202,12 +202,12 @@
             
             // Initialize Firebase
             const firebaseConfig = {
-                apiKey: "AIzaSyD3o-K0laghfbJNA11ubUhbHV7hNDNx8Cg",
-                authDomain: "ai-therapist-30c16.firebaseapp.com",
-                projectId: "ai-therapist-30c16",
-                storageBucket: "ai-therapist-30c16.appspot.com",
-                messagingSenderId: "359622442079",
-                appId: "1:359622442079:web:ebba5c45af2b46a9a69a35"
+                apiKey: "{{ firebase_config.apiKey }}",
+                authDomain: "{{ firebase_config.authDomain }}",
+                projectId: "{{ firebase_config.projectId }}",
+                storageBucket: "{{ firebase_config.storageBucket }}",
+                messagingSenderId: "{{ firebase_config.messagingSenderId }}",
+                appId: "{{ firebase_config.appId }}"
             };
             
             // Initialize Firebase

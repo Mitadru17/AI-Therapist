@@ -13,9 +13,270 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places" async defer></script>
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        /* Location button styles */
+        .location-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .detect-location-btn {
+            position: absolute;
+            right: 10px;
+            background: transparent;
+            border: none;
+            color: #5B6EF5;
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+        
+        .detect-location-btn:hover {
+            color: #4557E2;
+        }
+        
+        .location-spinner {
+            animation: spin 1s infinite linear;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Therapist List Styles */
+        .therapist-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        .therapist-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .therapist-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .therapist-item.active {
+            border-left: 4px solid #4f46e5;
+            background-color: #f5f3ff;
+        }
+        
+        .therapist-item-header {
+            display: flex;
+            align-items: center;
+        }
+        
+        .therapist-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .therapist-info {
+            flex-grow: 1;
+        }
+        
+        .therapist-name {
+            margin: 0 0 5px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .therapist-specialty {
+            color: #4f46e5;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        
+        .therapist-distance {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+        
+        .therapist-rating {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .therapist-rating i.fas.fa-star,
+        .therapist-rating i.fas.fa-star-half-alt {
+            color: #fbbf24;
+        }
+        
+        .therapist-rating i.far.fa-star {
+            color: #e5e7eb;
+        }
+        
+        /* Therapist Details Styles */
+        .therapist-details {
+            display: none;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .therapist-details-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .therapist-large-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        
+        .therapist-header-info {
+            flex-grow: 1;
+        }
+        
+        .therapist-header-name {
+            margin: 0 0 5px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .therapist-header-specialty {
+            color: #4f46e5;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .therapist-contact-btn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .therapist-contact-btn i {
+            margin-right: 6px;
+        }
+        
+        .therapist-contact-btn:hover {
+            background-color: #4338ca;
+        }
+        
+        .therapist-full-details {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .therapist-detail-column {
+            flex: 1;
+            min-width: 250px;
+            padding-right: 20px;
+        }
+        
+        .therapist-detail-section {
+            margin-bottom: 20px;
+        }
+        
+        .therapist-detail-section h4 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        .therapist-detail-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .therapist-detail-item i {
+            color: #6b7280;
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .close-details-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 18px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .close-details-btn:hover {
+            color: #ef4444;
+        }
+        
+        .therapist-list-placeholder {
+            text-align: center;
+            padding: 30px 20px;
+            color: #6b7280;
+        }
+        
+        .therapist-list-placeholder i {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #4f46e5;
+        }
+        
+        .therapist-list-placeholder p {
+            margin: 5px 0 0;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -66,8 +327,17 @@
                 <div class="tab active" data-tab="chat">
                     <i class="fas fa-comment"></i> Chat
                 </div>
+                <div class="tab" data-tab="live">
+                    <i class="fas fa-video"></i> Live Session
+                </div>
+                <div class="tab" data-tab="mood">
+                    <i class="fas fa-chart-line"></i> Mood Tracker
+                </div>
                 <div class="tab" data-tab="quotes">
                     <i class="fas fa-quote-right"></i> Quotes Collection
+                </div>
+                <div class="tab" data-tab="therapists">
+                    <i class="fas fa-user-md"></i> Find Therapists
                 </div>
                 <div class="tab" data-tab="emergency">
                     <i class="fas fa-phone-alt"></i> Emergency Resources
@@ -76,7 +346,7 @@
             
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Chat Tab -->
+                <!-- Tab Contents -->
                 <div class="tab-content active" id="chat-tab">
                     <div class="chat-container">
                         <div class="chat-header">
@@ -111,18 +381,142 @@
                     </div>
                 </div>
                 
+                <!-- Live Session Tab -->
+                <div class="tab-content" id="live-tab">
+                    <div class="live-session-container">
+                        <iframe src="/live-session" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+                    </div>
+                </div>
+                
+                <!-- Mood Tracker Tab -->
+                <div class="tab-content" id="mood-tab">
+                    <div class="mood-container">
+                        <div class="mood-header">
+                            <h2><i class="fas fa-chart-line"></i> Mood Tracking</h2>
+                            <button id="logMoodButton" class="log-mood-btn">
+                                <i class="fas fa-plus"></i> Log Current Mood
+                            </button>
+                        </div>
+                        
+                        <div class="mood-chart-container">
+                            <canvas id="moodChart"></canvas>
+                        </div>
+
+                        <div class="mood-form" id="moodForm" style="display: none;">
+                            <h3>How are you feeling?</h3>
+                            <div class="mood-buttons">
+                                <button class="mood-btn" data-mood="happy">😊 Happy</button>
+                                <button class="mood-btn" data-mood="excited">🤗 Excited</button>
+                                <button class="mood-btn" data-mood="neutral">😐 Neutral</button>
+                                <button class="mood-btn" data-mood="anxious">😰 Anxious</button>
+                                <button class="mood-btn" data-mood="sad">😢 Sad</button>
+                                <button class="mood-btn" data-mood="angry">😠 Angry</button>
+                            </div>
+                            <textarea id="moodNote" placeholder="Add a note about how you're feeling (optional)"></textarea>
+                            <button id="submitMood" class="submit-mood-btn">Save Mood</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Quotes Tab -->
                 <div class="tab-content" id="quotes-tab">
                     <div class="quotes-container">
                         <div class="quotes-header">
                             <h2><i class="fas fa-quote-right"></i> Your Inspirational Quotes</h2>
-                            <button id="quoteButton" class="get-quote-btn">
-                                <i class="fas fa-plus"></i> New Quote
-                            </button>
+                            <div class="quotes-actions">
+                                <button id="quoteButton" class="get-quote-btn">
+                                    <i class="fas fa-plus"></i> New Quote
+                                </button>
+                                <button id="quotesHelpBtn" class="quotes-help-btn" title="Learn about quotes collection">
+                                    <i class="fas fa-question-circle"></i>
+                                </button>
+                            </div>
                         </div>
                         
-                        <div class="quote-grid" id="quoteBubbles">
-                            <!-- Quotes will be added here dynamically -->
+                        <div class="quotes-intro">
+                            Save inspiring quotes that resonate with you. Come back to them whenever you need a boost or perspective.
+                        </div>
+                        
+                        <div class="quotes-categories">
+                            <div class="quote-category active" data-category="all">All Quotes</div>
+                            <div class="quote-category" data-category="inspiration">Inspiration</div>
+                            <div class="quote-category" data-category="mindfulness">Mindfulness</div>
+                            <div class="quote-category" data-category="growth">Growth</div>
+                            <div class="quote-category" data-category="resilience">Resilience</div>
+                        </div>
+                        
+                        <div class="search-quotes">
+                            <input type="text" id="quoteSearch" placeholder="Search quotes...">
+                            <button id="clearQuoteSearch"><i class="fas fa-times"></i></button>
+                        </div>
+                        
+                        <div class="quotes-grid-container">
+                            <div class="quote-grid" id="quoteBubbles">
+                                <!-- Quotes will be added here dynamically -->
+                            </div>
+                            
+                            <div class="no-quotes-message" id="noQuotesMessage" style="display: none;">
+                                <div class="empty-state">
+                                    <i class="fas fa-quote-right"></i>
+                                    <h3>Your Quote Collection is Empty</h3>
+                                    <p>Add your first quote by clicking the "New Quote" button above.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quotes-pagination">
+                            <button id="prevQuotesPage" class="pagination-btn" disabled>
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <span id="quotesPageInfo">Page 1</span>
+                            <button id="nextQuotesPage" class="pagination-btn" disabled>
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Therapists Tab (New) -->
+                <div class="tab-content" id="therapists-tab">
+                    <div class="therapists-container">
+                        <div class="therapists-header">
+                            <h2><i class="fas fa-map-marker-alt"></i> Find Therapists Near You</h2>
+                            <p class="therapists-intro">Discover qualified therapists in your area. View their locations, contact details, and reviews to find the right match for your needs.</p>
+                        </div>
+                        
+                        <div class="therapist-map-container">
+                            <div id="therapistMap" class="therapist-map"></div>
+                            <div class="map-sidebar">
+                                <div class="search-controls">
+                                    <div class="location-input-container">
+                                        <input type="text" id="therapistLocationSearch" placeholder="Enter your location" class="location-search">
+                                        <button id="detectLocationBtn" title="Detect my location" onclick="window.directDetectLocation()">
+                                            <i class="fas fa-crosshairs"></i>
+                                        </button>
+                                    </div>
+                                    <select id="therapistSpecialtyFilter" class="specialty-filter">
+                                        <option value="">All specialties</option>
+                                        <option value="anxiety">Anxiety</option>
+                                        <option value="depression">Depression</option>
+                                        <option value="trauma">Trauma & PTSD</option>
+                                        <option value="couples">Couples Therapy</option>
+                                        <option value="addiction">Addiction</option>
+                                    </select>
+                                    <button id="findTherapistsBtn" class="find-btn" onclick="window.directTherapistSearch()">
+                                        <i class="fas fa-search"></i> Find Therapists
+                                    </button>
+                                </div>
+                                <div id="therapistList" class="therapist-list">
+                                    <div class="therapist-list-placeholder">
+                                        <i class="fas fa-map-marked-alt"></i>
+                                        <p>Search for therapists in your area to see results here</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="therapistDetails" class="therapist-details">
+                            <!-- Therapist details will appear here when selected -->
                         </div>
                     </div>
                 </div>
@@ -134,11 +528,124 @@
                             <h2><i class="fas fa-phone-alt"></i> Emergency Resources</h2>
                             <div class="emergency-message">
                                 If you're experiencing thoughts of harming yourself or feeling overwhelmed, please reach out for help immediately. You're not alone.
+                                <button id="emergencyHelpBtn" class="emergency-help-btn" title="Learn more about these resources">
+                                    <i class="fas fa-question-circle"></i>
+                                </button>
                             </div>
+                        </div>
+                        
+                        <div class="emergency-categories">
+                            <div class="category active" data-category="all">All Resources</div>
+                            <div class="category" data-category="crisis">Crisis Support</div>
+                            <div class="category" data-category="mental">Mental Health</div>
+                            <div class="category" data-category="specialized">Specialized Support</div>
+                        </div>
+                        
+                        <div class="search-resources">
+                            <input type="text" id="resourceSearch" placeholder="Search resources...">
+                            <button id="clearSearch"><i class="fas fa-times"></i></button>
                         </div>
                         
                         <div class="resources-grid" id="emergencyResources">
                             <!-- Emergency resources will be added here dynamically -->
+                        </div>
+                        
+                        <div class="additional-info">
+                            <div class="info-card">
+                                <div class="info-header">
+                                    <i class="fas fa-info-circle"></i>
+                                    <h3>How to Help Someone in Crisis</h3>
+                                </div>
+                                <ul class="info-list">
+                                    <li>Stay calm and listen without judgment</li>
+                                    <li>Take all mentions of suicide or self-harm seriously</li>
+                                    <li>Don't leave them alone if they're at immediate risk</li>
+                                    <li>Help them connect with professional resources</li>
+                                    <li>Follow up and continue to offer support</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="info-card">
+                                <div class="info-header">
+                                    <i class="fas fa-check-circle"></i>
+                                    <h3>Signs Someone May Need Help</h3>
+                                </div>
+                                <ul class="info-list">
+                                    <li>Talking about wanting to die or kill oneself</li>
+                                    <li>Withdrawing from friends and activities</li>
+                                    <li>Extreme mood swings or changes in behavior</li>
+                                    <li>Increased substance use</li>
+                                    <li>Feeling hopeless or having no purpose</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Emergency Resources Help Modal -->
+                <div id="emergencyHelpModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-info-circle"></i> About Emergency Resources</h3>
+                            <button class="close-modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <h4>How to Use This Page</h4>
+                            <p>This page provides mental health and crisis resources available 24/7. If you're in immediate danger, please call emergency services (911 in the US) right away.</p>
+                            
+                            <h4>Finding the Right Resource</h4>
+                            <ul>
+                                <li><strong>Use the categories</strong> at the top to filter resources by type</li>
+                                <li><strong>Search</strong> for specific terms like "suicide," "chat," or "veterans"</li>
+                                <li><strong>Look for tags</strong> that match your specific needs</li>
+                                <li><strong>Visit websites</strong> using the provided links for more information</li>
+                            </ul>
+                            
+                            <h4>Important Notes</h4>
+                            <ul>
+                                <li>All crisis hotlines are confidential and operated by trained professionals</li>
+                                <li>Many services are available via text or chat if you prefer not to call</li>
+                                <li>If one resource doesn't feel right, try another - different services have different approaches</li>
+                                <li>These resources can connect you with ongoing support beyond the immediate crisis</li>
+                            </ul>
+                            
+                            <div class="modal-footer">
+                                <p>Remember: Reaching out for help is a sign of strength, not weakness.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quotes Help Modal -->
+                <div id="quotesHelpModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-info-circle"></i> About Quote Collection</h3>
+                            <button class="close-modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <h4>How Quote Collection Works</h4>
+                            <p>Your quote collection is a personal repository of inspiring words that can help during tough times or provide guidance when needed.</p>
+                            
+                            <h4>Using Your Collection</h4>
+                            <ul>
+                                <li><strong>Add new quotes</strong> by clicking the "New Quote" button</li>
+                                <li><strong>Filter quotes</strong> using the category buttons</li>
+                                <li><strong>Search</strong> through your collection using keywords</li>
+                                <li><strong>Delete quotes</strong> by hovering over them and clicking the X button</li>
+                            </ul>
+                            
+                            <h4>Benefits of Quote Collection</h4>
+                            <ul>
+                                <li>Revisit inspiring words when you need motivation</li>
+                                <li>Build a personalized collection that speaks to your journey</li>
+                                <li>Focus on specific themes with the category filters</li>
+                                <li>Find relevant guidance quickly with the search function</li>
+                            </ul>
+                            
+                            <div class="modal-footer">
+                                <p>Words have power. Collect the ones that move you.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -152,12 +659,12 @@
             try {
                 // Firebase configuration
                 const firebaseConfig = {
-                    apiKey: "AIzaSyD3o-K0laghfbJNA11ubUhbHV7hNDNx8Cg",
-                    authDomain: "ai-therapist-30c16.firebaseapp.com",
-                    projectId: "ai-therapist-30c16",
-                    storageBucket: "ai-therapist-30c16.appspot.com",
-                    messagingSenderId: "359622442079",
-                    appId: "1:359622442079:web:ebba5c45af2b46a9a69a35"
+                    apiKey: "{{ firebase_config.apiKey }}",
+                    authDomain: "{{ firebase_config.authDomain }}",
+                    projectId: "{{ firebase_config.projectId }}",
+                    storageBucket: "{{ firebase_config.storageBucket }}",
+                    messagingSenderId: "{{ firebase_config.messagingSenderId }}",
+                    appId: "{{ firebase_config.appId }}"
                 };
                 
                 // Initialize Firebase
@@ -229,8 +736,6 @@
                 const sendButton = document.getElementById('sendButton');
                 const detectedMood = document.getElementById('detectedMood');
                 const clearButton = document.getElementById('clearButton');
-                const quoteBubbles = document.getElementById('quoteBubbles');
-                const quoteButton = document.getElementById('quoteButton');
                 const emergencyResources = document.getElementById('emergencyResources');
                 const tabs = document.querySelectorAll('.tab');
                 const tabContents = document.querySelectorAll('.tab-content');
@@ -792,46 +1297,143 @@
                     }, 500);
                 }, 1000);
                 
-                // Function to load quotes from API
-                function loadQuotes() {
-                    fetch('/api/quotes')
-                        .then(response => response.json())
-                        .then(quotes => {
-                            // Clear existing quotes
-                            quoteBubbles.innerHTML = '';
-                            
-                            // Add each quote to the grid
-                            quotes.forEach(quote => {
-                                addQuoteCard(quote);
-                            });
-                        })
-                        .catch(error => {
-                            console.error('Error loading quotes:', error);
+                // Quote section variables
+                let currentQuotePage = 1;
+                let totalQuotePages = 1;
+                let currentQuoteCategory = 'all';
+                let currentQuoteSearch = '';
+                
+                // Elements
+                const quotesHelpBtn = document.getElementById('quotesHelpBtn');
+                const quotesHelpModal = document.getElementById('quotesHelpModal');
+                const quoteBubbles = document.getElementById('quoteBubbles');
+                const quoteButton = document.getElementById('quoteButton');
+                const quoteSearch = document.getElementById('quoteSearch');
+                const clearQuoteSearch = document.getElementById('clearQuoteSearch');
+                const quoteCategories = document.querySelectorAll('.quote-category');
+                const noQuotesMessage = document.getElementById('noQuotesMessage');
+                const prevQuotesPage = document.getElementById('prevQuotesPage');
+                const nextQuotesPage = document.getElementById('nextQuotesPage');
+                const quotesPageInfo = document.getElementById('quotesPageInfo');
+                
+                // Show quotes help modal
+                if (quotesHelpBtn) {
+                    quotesHelpBtn.addEventListener('click', function() {
+                        quotesHelpModal.style.display = 'block';
+                    });
+                    
+                    // Close quotes help modal
+                    const closeModalBtns = document.querySelectorAll('.close-modal');
+                    closeModalBtns.forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            quotesHelpModal.style.display = 'none';
+                            emergencyHelpModal.style.display = 'none';
                         });
+                    });
+                    
+                    // Close modal when clicking outside of it
+                    window.addEventListener('click', function(event) {
+                        if (event.target === quotesHelpModal) {
+                            quotesHelpModal.style.display = 'none';
+                        }
+                    });
                 }
                 
-                // Function to get a new quote
-                function getNewQuote() {
-                    fetch('/quote', { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+                // Function to load quotes with filtering and pagination
+                function loadQuotes() {
+                    // Show loading state
+                    quoteBubbles.innerHTML = `
+                        <div class="loading-quotes">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Loading quotes...</span>
+                        </div>
+                    `;
+                    
+                    // Build query parameters
+                    let queryParams = `?page=${currentQuotePage}`;
+                    if (currentQuoteCategory !== 'all') {
+                        queryParams += `&category=${currentQuoteCategory}`;
+                    }
+                    if (currentQuoteSearch) {
+                        queryParams += `&search=${encodeURIComponent(currentQuoteSearch)}`;
+                    }
+                    
+                    fetch(`/api/quotes${queryParams}`)
                         .then(response => response.json())
-                        .then(quoteData => { 
-                            if (quoteData.text) {
-                                addQuoteCard(quoteData); 
+                        .then(data => {
+                            const quotes = data.quotes || [];
+                            
+                            // Update pagination info
+                            if (data.pagination) {
+                                currentQuotePage = data.pagination.page;
+                                totalQuotePages = data.pagination.total_pages;
+                                
+                                // Update pagination UI
+                                updateQuotePagination();
+                            }
+                            
+                            // Clear quotes grid
+                            quoteBubbles.innerHTML = '';
+                            
+                            // Show no quotes message if no quotes found
+                            if (quotes.length === 0) {
+                                noQuotesMessage.style.display = 'flex';
+                            } else {
+                                noQuotesMessage.style.display = 'none';
+                                
+                                // Add each quote to the grid
+                                quotes.forEach(quote => {
+                                    addQuoteCard(quote);
+                                });
                             }
                         })
                         .catch(error => {
-                            console.error('Error getting quote:', error);
+                            console.error('Error loading quotes:', error);
+                            quoteBubbles.innerHTML = `
+                                <div class="error-message">
+                                    Failed to load quotes. Please try again later.
+                                </div>
+                            `;
                         });
+                }
+                
+                // Function to update pagination controls
+                function updateQuotePagination() {
+                    // Update page info
+                    quotesPageInfo.textContent = `Page ${currentQuotePage} of ${totalQuotePages}`;
+                    
+                    // Enable/disable previous button
+                    if (currentQuotePage <= 1) {
+                        prevQuotesPage.disabled = true;
+                    } else {
+                        prevQuotesPage.disabled = false;
+                    }
+                    
+                    // Enable/disable next button
+                    if (currentQuotePage >= totalQuotePages) {
+                        nextQuotesPage.disabled = true;
+                    } else {
+                        nextQuotesPage.disabled = false;
+                    }
                 }
                 
                 // Function to add a quote card to the grid
                 function addQuoteCard(quoteData) {
                     const quoteText = quoteData.text;
                     const quoteId = quoteData.id || '';
+                    const quoteCategory = quoteData.category || 'inspiration';
+                    
+                    // Create date string if available
+                    let dateString = '';
+                    if (quoteData.created_at) {
+                        const quoteDate = new Date(quoteData.created_at * 1000);
+                        dateString = quoteDate.toLocaleDateString();
+                    }
                     
                     const quoteBubble = document.createElement('div');
                     quoteBubble.className = 'quote-bubble';
                     quoteBubble.dataset.quoteId = quoteId;
+                    quoteBubble.dataset.category = quoteCategory;
                     
                     // Create delete button for quote
                     const deleteBtn = document.createElement('button');
@@ -850,14 +1452,17 @@
                         }
                     });
                     
-                    // Create quote text element
-                    const quoteContent = document.createElement('div');
-                    quoteContent.className = 'quote-text';
-                    quoteContent.textContent = quoteText;
+                    // Format quote bubble content
+                    quoteBubble.innerHTML = `
+                        <div class="quote-text">${quoteText}</div>
+                        <div class="quote-category-tag">${quoteCategory.charAt(0).toUpperCase() + quoteCategory.slice(1)}</div>
+                        <div class="quote-meta">
+                            <span class="quote-date">${dateString}</span>
+                        </div>
+                    `;
                     
-                    // Add elements to bubble
+                    // Add delete button
                     quoteBubble.appendChild(deleteBtn);
-                    quoteBubble.appendChild(quoteContent);
                     
                     // Add to grid
                     quoteBubbles.appendChild(quoteBubble);
@@ -870,19 +1475,1377 @@
                         .then(result => {
                             if (result.success) {
                                 quoteBubble.remove();
+                                
+                                // If grid is now empty, show no quotes message
+                                if (quoteBubbles.children.length === 0) {
+                                    noQuotesMessage.style.display = 'flex';
+                                }
                             } else {
                                 console.error('Error deleting quote:', result.error);
+                                alert('Failed to delete quote. Please try again.');
                             }
                         })
                         .catch(error => {
                             console.error('Error deleting quote:', error);
+                            alert('Failed to delete quote. Please try again.');
                         });
                 }
                 
-                // Quote button event
-                quoteButton.addEventListener('click', getNewQuote);
+                // Function to get a new quote
+                function getNewQuote() {
+                    // Get the current category filter
+                    const category = currentQuoteCategory === 'all' ? 'random' : currentQuoteCategory;
+                    
+                    fetch(`/quote?category=${category}`, { 
+                        method: 'GET', 
+                        headers: { 'Content-Type': 'application/json' } 
+                    })
+                    .then(response => response.json())
+                    .then(quoteData => { 
+                        if (quoteData.text) {
+                            // Add the new quote
+                            addQuoteCard(quoteData);
+                            
+                            // Hide no quotes message if visible
+                            noQuotesMessage.style.display = 'none';
+                            
+                            // Scroll the new quote into view
+                            const firstQuote = quoteBubbles.firstChild;
+                            if (firstQuote) {
+                                firstQuote.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting quote:', error);
+                        alert('Failed to get a new quote. Please try again.');
+                    });
+                }
+                
+                // Event listener for quote button
+                if (quoteButton) {
+                    quoteButton.addEventListener('click', getNewQuote);
+                }
+                
+                // Event listeners for category filters
+                if (quoteCategories) {
+                    quoteCategories.forEach(category => {
+                        category.addEventListener('click', function() {
+                            // Remove active class from all categories
+                            quoteCategories.forEach(cat => cat.classList.remove('active'));
+                            
+                            // Add active class to clicked category
+                            this.classList.add('active');
+                            
+                            // Update current category
+                            currentQuoteCategory = this.dataset.category;
+                            
+                            // Reset to page 1 when changing categories
+                            currentQuotePage = 1;
+                            
+                            // Load quotes with new filter
+                            loadQuotes();
+                        });
+                    });
+                }
+                
+                // Event listener for search
+                if (quoteSearch) {
+                    quoteSearch.addEventListener('input', function() {
+                        // Show/hide clear button
+                        if (this.value) {
+                            clearQuoteSearch.classList.add('visible');
+                        } else {
+                            clearQuoteSearch.classList.remove('visible');
+                        }
+                    });
+                    
+                    // Debounce search to avoid too many requests
+                    let searchTimeout;
+                    quoteSearch.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(() => {
+                            currentQuoteSearch = this.value;
+                            currentQuotePage = 1; // Reset to page 1 when searching
+                            loadQuotes();
+                        }, 300);
+                    });
+                }
+                
+                // Event listener for clear search
+                if (clearQuoteSearch) {
+                    clearQuoteSearch.addEventListener('click', function() {
+                        quoteSearch.value = '';
+                        currentQuoteSearch = '';
+                        this.classList.remove('visible');
+                        loadQuotes();
+                    });
+                }
+                
+                // Event listeners for pagination
+                if (prevQuotesPage) {
+                    prevQuotesPage.addEventListener('click', function() {
+                        if (currentQuotePage > 1) {
+                            currentQuotePage--;
+                            loadQuotes();
+                        }
+                    });
+                }
+                
+                if (nextQuotesPage) {
+                    nextQuotesPage.addEventListener('click', function() {
+                        if (currentQuotePage < totalQuotePages) {
+                            currentQuotePage++;
+                            loadQuotes();
+                        }
+                    });
+                }
+                
+                // Load quotes when the quotes tab is shown
+                document.querySelector('[data-tab="quotes"]').addEventListener('click', function() {
+                    // If first time loading, initialize quotes
+                    if (!window.quotesInitialized) {
+                        loadQuotes();
+                        window.quotesInitialized = true;
+                    }
+                });
+                
+                // Add quotes tab to the globally scoped functions
+                if (typeof window.tabInitializers === 'undefined') {
+                    window.tabInitializers = {};
+                }
+                
+                window.tabInitializers.quotes = loadQuotes;
             }
         });
+    </script>
+
+    <!-- Add Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Add the mood tracking JavaScript -->
+    <script>
+        // Initialize mood chart
+        let moodChart = null;
+
+        async function initializeMoodChart() {
+            const ctx = document.getElementById('moodChart').getContext('2d');
+            moodChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Mood Level',
+                        data: [],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 6,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return ['', 'Very Low', 'Low', 'Neutral', 'Good', 'Excellent'][value] || '';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to load mood data
+        async function loadMoodData() {
+            try {
+                const response = await fetch('/get_moods');
+                const data = await response.json();
+                
+                if (moodChart) {
+                    moodChart.data.labels = data.labels;
+                    moodChart.data.datasets[0].data = data.values;
+                    moodChart.update();
+                }
+            } catch (error) {
+                console.error('Error loading mood data:', error);
+            }
+        }
+
+        // Event listeners for mood tracking
+        document.getElementById('logMoodButton')?.addEventListener('click', function() {
+            const moodForm = document.getElementById('moodForm');
+            moodForm.style.display = moodForm.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.querySelectorAll('.mood-btn')?.forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        document.getElementById('submitMood')?.addEventListener('click', async function() {
+            const selectedMood = document.querySelector('.mood-btn.selected')?.dataset.mood;
+            const note = document.getElementById('moodNote').value;
+            
+            if (!selectedMood) {
+                alert('Please select a mood');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/log_mood', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        mood: selectedMood,
+                        note: note,
+                        date: new Date().toISOString().split('T')[0]
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('moodForm').style.display = 'none';
+                    document.getElementById('moodNote').value = '';
+                    document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+                    loadMoodData();
+                } else {
+                    alert('Failed to save mood');
+                }
+            } catch (error) {
+                console.error('Error saving mood:', error);
+                alert('Failed to save mood');
+            }
+        });
+
+        // Initialize mood tracking when the tab is shown
+        document.querySelector('[data-tab="mood"]')?.addEventListener('click', function() {
+            if (!moodChart) {
+                initializeMoodChart();
+            }
+            loadMoodData();
+        });
+    </script>
+
+    <!-- Emergency Resources JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to display emergency resources with enhanced features
+            function displayEmergencyResources(resources) {
+                const emergencyResources = document.getElementById('emergencyResources');
+                if (!emergencyResources) return;
+                
+                emergencyResources.innerHTML = '';
+                
+                if (!resources || resources.length === 0) {
+                    // Load from server-side data
+                    fetch('/api/emergency-resources')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                renderResourceCards(data);
+                            } else {
+                                // If API fails, use hardcoded resources from app.py
+                                loadStaticResources();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading emergency resources:', error);
+                            loadStaticResources();
+                        });
+                } else {
+                    renderResourceCards(resources);
+                }
+            }
+            
+            // Function to load static resources as a fallback
+            function loadStaticResources() {
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: "Show me emergency resources",
+                        is_emergency: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.resources && data.resources.length > 0) {
+                        renderResourceCards(data.resources);
+                    } else {
+                        // Fallback to hardcoded resources if needed
+                        emergencyResources.innerHTML = '<div class="error-message">Could not load emergency resources. Please try again later.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading emergency resources:', error);
+                    emergencyResources.innerHTML = '<div class="error-message">Could not load emergency resources. Please try again later.</div>';
+                });
+            }
+            
+            // Function to render resource cards with enhanced details
+            function renderResourceCards(resources) {
+                const emergencyResources = document.getElementById('emergencyResources');
+                emergencyResources.innerHTML = '';
+                
+                resources.forEach(resource => {
+                    const resourceCard = document.createElement('div');
+                    resourceCard.className = 'resource-card';
+                    resourceCard.dataset.category = resource.category || 'other';
+                    
+                    // Create tags HTML if tags exist
+                    let tagsHtml = '';
+                    if (resource.tags && resource.tags.length > 0) {
+                        tagsHtml = resource.tags.map(tag => 
+                            `<span class="resource-tag">${tag}</span>`
+                        ).join('');
+                    }
+                    
+                    // Create website button if URL exists
+                    let websiteButton = '';
+                    if (resource.website) {
+                        websiteButton = `
+                            <a href="${resource.website}" target="_blank" rel="noopener noreferrer" class="resource-button">
+                                Visit Website <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        `;
+                    }
+                    
+                    resourceCard.innerHTML = `
+                        <div class="resource-name">${resource.name}</div>
+                        ${tagsHtml}
+                        <div class="resource-contact">${resource.contact}</div>
+                        <div class="resource-description">${resource.description}</div>
+                        ${websiteButton}
+                    `;
+                    
+                    emergencyResources.appendChild(resourceCard);
+                });
+                
+                // Initialize search and filtering functionality
+                initializeResourceFiltering();
+            }
+            
+            // Function to initialize search and category filtering
+            function initializeResourceFiltering() {
+                const resourceSearch = document.getElementById('resourceSearch');
+                const clearSearch = document.getElementById('clearSearch');
+                const categoryButtons = document.querySelectorAll('.category');
+                
+                // Handle search functionality
+                if (resourceSearch) {
+                    resourceSearch.addEventListener('input', function() {
+                        const searchTerm = this.value.toLowerCase();
+                        filterResources(searchTerm);
+                        
+                        // Show/hide clear button
+                        if (searchTerm) {
+                            clearSearch.classList.add('visible');
+                        } else {
+                            clearSearch.classList.remove('visible');
+                        }
+                    });
+                }
+                
+                // Handle clear search button
+                if (clearSearch) {
+                    clearSearch.addEventListener('click', function() {
+                        resourceSearch.value = '';
+                        filterResources('');
+                        this.classList.remove('visible');
+                    });
+                }
+                
+                // Handle category filtering
+                if (categoryButtons) {
+                    categoryButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            // Remove active class from all category buttons
+                            categoryButtons.forEach(btn => btn.classList.remove('active'));
+                            
+                            // Add active class to clicked button
+                            this.classList.add('active');
+                            
+                            // Filter resources by category
+                            const category = this.dataset.category;
+                            filterResourcesByCategory(category);
+                        });
+                    });
+                }
+            }
+            
+            // Function to filter resources by search term
+            function filterResources(searchTerm) {
+                const resourceCards = document.querySelectorAll('.resource-card');
+                const activeCategory = document.querySelector('.category.active').dataset.category;
+                
+                resourceCards.forEach(card => {
+                    const content = card.textContent.toLowerCase();
+                    const tags = Array.from(card.querySelectorAll('.resource-tag'))
+                        .map(tag => tag.textContent.toLowerCase());
+                    
+                    // Check if card matches search term
+                    const matchesSearch = searchTerm === '' || 
+                        content.includes(searchTerm) || 
+                        tags.some(tag => tag.includes(searchTerm));
+                        
+                    // Check if card matches active category
+                    const matchesCategory = activeCategory === 'all' || 
+                        card.dataset.category === activeCategory;
+                    
+                    // Show/hide card based on both conditions
+                    if (matchesSearch && matchesCategory) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+                
+                // Show no results message if needed
+                const visibleCards = document.querySelectorAll('.resource-card:not(.hidden)');
+                const noResultsMessage = document.querySelector('.no-results-message');
+                
+                if (visibleCards.length === 0) {
+                    if (!noResultsMessage) {
+                        const message = document.createElement('div');
+                        message.className = 'no-results-message';
+                        message.innerHTML = `
+                            <p>No resources match your search criteria.</p>
+                            <button id="resetSearch" class="reset-search-btn">Clear search</button>
+                        `;
+                        document.getElementById('emergencyResources').appendChild(message);
+                        
+                        // Add event listener to reset button
+                        document.getElementById('resetSearch').addEventListener('click', function() {
+                            document.getElementById('resourceSearch').value = '';
+                            filterResources('');
+                            document.getElementById('clearSearch').classList.remove('visible');
+                        });
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+            
+            // Function to filter resources by category
+            function filterResourcesByCategory(category) {
+                const resourceCards = document.querySelectorAll('.resource-card');
+                const searchTerm = document.getElementById('resourceSearch').value.toLowerCase();
+                
+                resourceCards.forEach(card => {
+                    const content = card.textContent.toLowerCase();
+                    const tags = Array.from(card.querySelectorAll('.resource-tag'))
+                        .map(tag => tag.textContent.toLowerCase());
+                    
+                    // Check if card matches search term
+                    const matchesSearch = searchTerm === '' || 
+                        content.includes(searchTerm) || 
+                        tags.some(tag => tag.includes(searchTerm));
+                        
+                    // Check if card matches active category
+                    const matchesCategory = category === 'all' || 
+                        card.dataset.category === category;
+                    
+                    // Show/hide card based on both conditions
+                    if (matchesSearch && matchesCategory) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+                
+                // Show no results message if needed
+                const visibleCards = document.querySelectorAll('.resource-card:not(.hidden)');
+                const noResultsMessage = document.querySelector('.no-results-message');
+                
+                if (visibleCards.length === 0) {
+                    if (!noResultsMessage) {
+                        const message = document.createElement('div');
+                        message.className = 'no-results-message';
+                        message.innerHTML = `
+                            <p>No resources match your search criteria.</p>
+                            <button id="resetFilters" class="reset-search-btn">Reset filters</button>
+                        `;
+                        document.getElementById('emergencyResources').appendChild(message);
+                        
+                        // Add event listener to reset button
+                        document.getElementById('resetFilters').addEventListener('click', function() {
+                            document.getElementById('resourceSearch').value = '';
+                            document.querySelector('.category[data-category="all"]').click();
+                            document.getElementById('clearSearch').classList.remove('visible');
+                        });
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+            
+            // Load emergency resources when the emergency tab is shown
+            document.querySelector('[data-tab="emergency"]').addEventListener('click', function() {
+                displayEmergencyResources([]);
+            });
+        });
+    </script>
+
+    <style>
+    .affirmation-section {
+        margin: 20px;
+        padding: 10px;
+    }
+
+    .affirmation-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+
+    .affirmation-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .affirmation-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .affirmation-header i {
+        color: #FFD700;
+        font-size: 24px;
+    }
+
+    .affirmation-header h2 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.5em;
+    }
+
+    .affirmation-content {
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .affirmation-text {
+        font-size: 1.2em;
+        color: #34495e;
+        line-height: 1.6;
+        margin-bottom: 10px;
+        font-style: italic;
+    }
+
+    .affirmation-mood {
+        color: #7f8c8d;
+        font-size: 0.9em;
+        margin-top: 10px;
+    }
+
+    .refresh-btn {
+        background: #f8f9fa;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        color: #2c3e50;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 auto;
+        transition: background-color 0.2s;
+    }
+
+    .refresh-btn:hover {
+        background: #e9ecef;
+    }
+
+    .refresh-btn i {
+        font-size: 14px;
+    }
+
+    /* Additional styles for emergency resources */
+    .no-results-message {
+        text-align: center;
+        padding: 30px;
+        background: #f9f9f9;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+
+    .no-results-message p {
+        color: #4a5568;
+        margin-bottom: 15px;
+    }
+
+    .reset-search-btn {
+        background: var(--primary-color, #5B6EF5);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+    }
+
+    .reset-search-btn:hover {
+        background: var(--primary-dark, #4557E2);
+    }
+
+    .error-message {
+        color: #e53e3e;
+        text-align: center;
+        padding: 20px;
+        background: #fff5f5;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    </style>
+
+    <!-- Floating Button and Affirmation Popup -->
+    <div id="affirmationSystem">
+        <button id="affirmationButton" class="affirmation-button">
+            <i class="fas fa-lightbulb"></i>
+        </button>
+        <div id="affirmationPopup" class="affirmation-popup">
+            <div class="affirmation-popup-header">
+                <i class="fas fa-sun pulse-animation"></i>
+                <h3>Daily Insight</h3>
+                <button id="closeAffirmation" class="close-affirmation">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="affirmation-divider"></div>
+            <p id="affirmationText" class="affirmation-text">Loading your affirmation...</p>
+            <div class="affirmation-footer">
+                <span class="affirmation-source"></span>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* All styles for the affirmation system */
+    #affirmationSystem {
+        position: fixed;
+        z-index: 9999;
+        top: 0;
+        right: 0;
+        pointer-events: none;
+    }
+    
+    .affirmation-button {
+        position: fixed;
+        top: 20px;
+        right: 130px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--primary-color, #5B6EF5);
+        color: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: transform 0.3s ease, background-color 0.3s ease;
+        z-index: 9999;
+        pointer-events: auto;
+    }
+    
+    .affirmation-button:hover {
+        transform: scale(1.05);
+        background: var(--primary-dark, #4557E2);
+    }
+    
+    .affirmation-popup {
+        position: fixed;
+        top: 90px;
+        right: 130px;
+        width: 300px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        border-top: 3px solid var(--primary-color, #5B6EF5);
+        padding: 20px;
+        z-index: 9999;
+        pointer-events: auto;
+        display: none; /* Hidden by default */
+    }
+    
+    .affirmation-popup.show {
+        display: block;
+        animation: popup-animation 0.3s forwards;
+    }
+    
+    @keyframes popup-animation {
+        0% { opacity: 0; transform: translateY(-20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    
+    .affirmation-popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    
+    .affirmation-popup-header i {
+        color: #FFD700;
+        font-size: 20px;
+    }
+    
+    .affirmation-popup-header h3 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.2em;
+    }
+    
+    .close-affirmation {
+        background: none;
+        border: none;
+        color: #718096;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .affirmation-divider {
+        height: 1px;
+        background: linear-gradient(to right, transparent, var(--primary-light, #EEF1FF), transparent);
+        margin: 5px 0 15px;
+    }
+    
+    .affirmation-text {
+        font-size: 1.1em;
+        line-height: 1.5;
+        font-style: italic;
+        text-align: center;
+        color: #34495e;
+        margin: 0;
+    }
+    
+    .affirmation-footer {
+        margin-top: 15px;
+        text-align: right;
+        font-size: 0.75em;
+        color: #718096;
+        font-style: italic;
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite ease-in-out;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        .affirmation-button {
+            top: 15px;
+            right: 80px;
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+        }
+        
+        .affirmation-popup {
+            top: 65px;
+            right: 10px;
+            width: 250px;
+            padding: 15px;
+        }
+        
+        .affirmation-text {
+            font-size: 1em;
+        }
+    }
+    </style>
+
+    <script>
+    // Completely new implementation of the affirmation system
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elements
+        const affirmationButton = document.getElementById('affirmationButton');
+        const affirmationPopup = document.getElementById('affirmationPopup');
+        const closeAffirmation = document.getElementById('closeAffirmation');
+        const affirmationText = document.getElementById('affirmationText');
+        
+        // Variables
+        let affirmationTimer = null;
+        
+        // Function to show a new affirmation
+        async function showAffirmation() {
+            try {
+                // Show loading state
+                affirmationText.textContent = 'Loading your affirmation...';
+                affirmationPopup.classList.add('show');
+                
+                // Fetch a new affirmation
+                const response = await fetch('/get_affirmation');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log("Affirmation response:", data);
+                
+                // Update the text
+                if (data.affirmation) {
+                    affirmationText.textContent = data.affirmation;
+                } else if (data.error) {
+                    console.error('Error loading affirmation:', data.error);
+                    affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                } else {
+                    affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                }
+                
+                // Set auto-hide timer
+                if (affirmationTimer) {
+                    clearTimeout(affirmationTimer);
+                }
+                
+                affirmationTimer = setTimeout(() => {
+                    hideAffirmation();
+                }, 20000); // Hide after 20 seconds
+                
+            } catch (error) {
+                console.error('Error fetching affirmation:', error);
+                affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                
+                // Still show the popup with default text
+                affirmationPopup.classList.add('show');
+                
+                // Set auto-hide timer
+                if (affirmationTimer) {
+                    clearTimeout(affirmationTimer);
+                }
+                
+                affirmationTimer = setTimeout(() => {
+                    hideAffirmation();
+                }, 20000);
+            }
+        }
+        
+        // Function to hide the affirmation
+        function hideAffirmation() {
+            affirmationPopup.classList.remove('show');
+            if (affirmationTimer) {
+                clearTimeout(affirmationTimer);
+                affirmationTimer = null;
+            }
+        }
+        
+        // Event Listeners
+        if (affirmationButton) {
+            affirmationButton.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Show popup first with loading state
+                affirmationPopup.classList.add('show');
+                affirmationText.textContent = 'Loading your affirmation...';
+                
+                // Always fetch a new affirmation when button is clicked
+                fetch('/get_affirmation')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Affirmation response:", data);
+                        if (data.affirmation) {
+                            affirmationText.textContent = data.affirmation;
+                        } else if (data.error) {
+                            console.error('Error loading affirmation:', data.error);
+                            affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                        } else {
+                            affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching affirmation:', error);
+                        affirmationText.textContent = 'I am worthy of love, respect, and positive energy.';
+                    });
+                
+                // Reset auto-hide timer
+                if (affirmationTimer) {
+                    clearTimeout(affirmationTimer);
+                }
+                
+                affirmationTimer = setTimeout(() => {
+                    hideAffirmation();
+                }, 20000);
+            });
+        }
+        
+        if (closeAffirmation) {
+            closeAffirmation.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                hideAffirmation();
+            });
+        }
+        
+        // Close on clicking outside
+        document.addEventListener('click', function(event) {
+            if (affirmationPopup.classList.contains('show') && 
+                !affirmationPopup.contains(event.target) && 
+                event.target !== affirmationButton) {
+                hideAffirmation();
+            }
+        });
+        
+        // Show first affirmation after 15 seconds
+        setTimeout(showAffirmation, 15000);
+        
+        // Show new affirmation every 60 seconds
+        setInterval(showAffirmation, 60000);
+    });
+    </script>
+
+    <!-- Additional Modal Styles -->
+    <style>
+    /* All styles for the emergency help modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        width: 80%;
+        max-width: 600px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        animation: slideIn 0.3s;
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(-50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: var(--primary-color, #5B6EF5);
+        font-size: 1.2rem;
+    }
+    
+    .modal-header i {
+        margin-right: 10px;
+    }
+    
+    .close-modal {
+        color: #aaa;
+        font-size: 28px;
+        font-weight: bold;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .close-modal:hover {
+        color: var(--primary-color, #5B6EF5);
+    }
+    
+    .modal-body {
+        padding: 20px;
+        color: #4a5568;
+    }
+    
+    .modal-body h4 {
+        color: #2d3748;
+        margin: 20px 0 10px;
+        font-size: 1.1rem;
+    }
+    
+    .modal-body p, .modal-body li {
+        line-height: 1.6;
+        margin-bottom: 10px;
+    }
+    
+    .modal-body ul {
+        padding-left: 25px;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e2e8f0;
+        padding: 15px 20px;
+        text-align: center;
+        font-style: italic;
+        margin-top: 20px;
+    }
+    
+    .emergency-help-btn {
+        background: none;
+        border: none;
+        color: #e53e3e;
+        font-size: 1.2rem;
+        cursor: pointer;
+        vertical-align: middle;
+        margin-left: 10px;
+        transition: transform 0.2s, color 0.2s;
+    }
+    
+    .emergency-help-btn:hover {
+        transform: scale(1.1);
+        color: #c53030;
+    }
+    
+    /* Responsive modal */
+    @media (max-width: 768px) {
+        .modal-content {
+            width: 95%;
+            margin: 5% auto;
+        }
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal functionality
+        const emergencyHelpBtn = document.getElementById('emergencyHelpBtn');
+        const emergencyHelpModal = document.getElementById('emergencyHelpModal');
+        const closeModal = document.querySelector('.close-modal');
+        
+        if (emergencyHelpBtn) {
+            emergencyHelpBtn.addEventListener('click', function() {
+                emergencyHelpModal.style.display = 'block';
+            });
+        }
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', function() {
+                emergencyHelpModal.style.display = 'none';
+            });
+        }
+        
+        // Close modal when clicking outside of it
+        window.addEventListener('click', function(event) {
+            if (event.target === emergencyHelpModal) {
+                emergencyHelpModal.style.display = 'none';
+            }
+        });
+        
+        // Close modal with escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && emergencyHelpModal.style.display === 'block') {
+                emergencyHelpModal.style.display = 'none';
+            }
+        });
+    });
+    </script>
+
+    <!-- Main App Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mood.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quotes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/emergency.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/therapist-map.js') }}"></script>
+    
+    <!-- Load Google Maps API with callback to initMap -->
+    <script>
+        // Google Maps initialization status
+        window.mapsInitialized = false;
+        
+        // Function to initialize Google Maps
+        function initializeGoogleMaps() {
+            // Create a new script element for Google Maps
+            const script = document.createElement('script');
+            script.src = "https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMapCallback";
+            script.async = true;
+            script.defer = true;
+            
+            // Add the script to the document
+            document.body.appendChild(script);
+        }
+        
+        // Callback when Google Maps loads
+        window.initMapCallback = function() {
+            console.log("Google Maps loaded successfully");
+            window.mapsInitialized = true;
+            
+            // Initialize main page map if we're on the main page
+            const mapElement = document.getElementById('therapistMap');
+            if (mapElement) {
+                initializeTherapistMap();
+            }
+        };
+        
+        // Initialize the therapist map
+        function initializeTherapistMap() {
+            console.log("Initializing therapist map");
+            const mapElement = document.getElementById('therapistMap');
+            
+            if (!mapElement) {
+                console.error("Map element not found");
+                return;
+            }
+            
+            // Create map only if it doesn't already exist
+            if (!window.mainPageMap) {
+                console.log("Creating new map");
+                window.mainPageMap = new google.maps.Map(mapElement, {
+                    center: { lat: 37.0902, lng: -95.7129 },
+                    zoom: 4,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true
+                });
+                
+                // Initialize other map-related services
+                window.mainPageGeocoder = new google.maps.Geocoder();
+                window.mainPageMarkers = [];
+                window.mainPageInfoWindows = [];
+            }
+        }
+        
+        // Wait for DOM to be loaded before initializing Google Maps
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeGoogleMaps();
+            
+            // Set up tab switching for map reinitialization if needed
+            const tabLinks = document.querySelectorAll('.tab');
+            if (tabLinks) {
+                tabLinks.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        const tabId = this.getAttribute('data-tab');
+                        if (tabId === 'therapists') {
+                            // If maps aren't initialized yet, initialize them
+                            if (!window.mapsInitialized) {
+                                initializeGoogleMaps();
+                            } else {
+                                // Make sure the map is rendered properly
+                                const mapElement = document.getElementById('therapistMap');
+                                if (mapElement && !window.mainPageMap) {
+                                    initializeTherapistMap();
+                                } else if (window.mainPageMap) {
+                                    // Reset the map if it exists - fixes display issues
+                                    google.maps.event.trigger(window.mainPageMap, 'resize');
+                                    // If we have bounds, fit to them again
+                                    if (window.mainPageBounds && !window.mainPageBounds.isEmpty()) {
+                                        window.mainPageMap.fitBounds(window.mainPageBounds);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        // Function to show therapist markers on map
+        function addTherapistMarkersToMap(therapists) {
+            console.log("Adding therapist markers to map");
+            
+            // Ensure the map is initialized
+            if (!window.mapsInitialized) {
+                console.log("Maps not initialized yet, initializing now");
+                initializeGoogleMaps();
+                // Set a timer to add markers after maps are initialized
+                setTimeout(function() {
+                    addTherapistMarkersToMap(therapists);
+                }, 1000);
+                return;
+            }
+            
+            // Get map element
+            const mapElement = document.getElementById('therapistMap');
+            if (!mapElement) {
+                console.error("Map element not found");
+                return;
+            }
+            
+            // Initialize map if it doesn't exist
+            if (!window.mainPageMap) {
+                console.log("Creating new map");
+                // Create a map instance for the main page
+                window.mainPageMap = new google.maps.Map(mapElement, {
+                    center: { lat: 37.0902, lng: -95.7129 },
+                    zoom: 4,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true
+                });
+            }
+            
+            // Clear existing markers
+            if (window.mainPageMarkers) {
+                window.mainPageMarkers.forEach(marker => marker.setMap(null));
+            }
+            window.mainPageMarkers = [];
+            
+            // Clear existing info windows
+            if (window.mainPageInfoWindows) {
+                window.mainPageInfoWindows.forEach(window => window.close());
+            }
+            window.mainPageInfoWindows = [];
+            
+            // Create bounds object
+            window.mainPageBounds = new google.maps.LatLngBounds();
+            
+            // Add markers for each therapist
+            therapists.forEach(therapist => {
+                try {
+                    // Get coordinates
+                    const location = therapist.geometry?.location || { lat: therapist.latitude, lng: therapist.longitude };
+                    const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+                    const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+                    
+                    if (!lat || !lng) {
+                        console.error("Invalid coordinates for therapist:", therapist);
+                        return;
+                    }
+                    
+                    console.log(`Creating marker for therapist at (${lat}, ${lng})`);
+                    
+                    // Create marker position
+                    const position = new google.maps.LatLng(lat, lng);
+                    
+                    // Add marker to map
+                    const marker = new google.maps.Marker({
+                        position: position,
+                        map: window.mainPageMap,
+                        title: therapist.name,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: '#ef4444',
+                            fillOpacity: 1,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 2
+                        }
+                    });
+                    
+                    // Create info window content
+                    const infoWindowContent = `
+                        <div class="map-popup">
+                            <h3>${therapist.name}</h3>
+                            <p>${therapist.specialty || 'Therapist'}</p>
+                            <p><i class="fas fa-map-marker-alt"></i> ${therapist.distance || 'Distance not available'} miles away</p>
+                            <p>${therapist.vicinity || therapist.formatted_address || therapist.address || 'Address not available'}</p>
+                        </div>
+                    `;
+                    
+                    // Create info window
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: infoWindowContent
+                    });
+                    
+                    // Add to info windows array
+                    if (!window.mainPageInfoWindows) {
+                        window.mainPageInfoWindows = [];
+                    }
+                    window.mainPageInfoWindows.push(infoWindow);
+                    
+                    // Add click event to marker
+                    marker.addListener('click', function() {
+                        // Close all open info windows
+                        window.mainPageInfoWindows.forEach(window => window.close());
+                        
+                        // Open this info window
+                        infoWindow.open(window.mainPageMap, marker);
+                        
+                        // Show therapist details
+                        showTherapistDetails(therapist);
+                    });
+                    
+                    // Add marker to array
+                    if (!window.mainPageMarkers) {
+                        window.mainPageMarkers = [];
+                    }
+                    window.mainPageMarkers.push(marker);
+                    
+                    // Add to bounds
+                    window.mainPageBounds.extend(position);
+                } catch (error) {
+                    console.error("Error adding marker for therapist:", error, therapist);
+                }
+            });
+            
+            // Add user location marker if available
+            if (window.userLocation) {
+                const userPosition = new google.maps.LatLng(window.userLocation.latitude, window.userLocation.longitude);
+                
+                // Create or update user marker
+                if (window.userMarker) {
+                    window.userMarker.setPosition(userPosition);
+                } else {
+                    // Create custom user marker
+                    window.userMarker = new google.maps.Marker({
+                        position: userPosition,
+                        map: window.mainPageMap,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: '#5B6EF5',
+                            fillOpacity: 1,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 2
+                        },
+                        title: 'Your Location',
+                        zIndex: 1000
+                    });
+                }
+                
+                // Add to bounds
+                window.mainPageBounds.extend(userPosition);
+            }
+            
+            // Fit map to bounds
+            if (!window.mainPageBounds.isEmpty()) {
+                console.log("Fitting map to bounds");
+                window.mainPageMap.fitBounds(window.mainPageBounds, 50); // 50px padding
+                
+                // Ensure map is properly displayed by triggering resize
+                google.maps.event.trigger(window.mainPageMap, 'resize');
+            } else {
+                console.warn("Bounds is empty, cannot fit map");
+            }
+        }
     </script>
 </body>
 </html> 

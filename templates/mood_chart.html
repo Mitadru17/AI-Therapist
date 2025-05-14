@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Tracker - Chart View</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .chart-container {
+            position: relative;
+            height: 450px;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            padding: 20px;
+            display: none;
+            background-color: #ffebee;
+            border-radius: 8px;
+        }
+        .mood-legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 25px;
+            gap: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .mood-item {
+            display: flex;
+            align-items: center;
+            margin: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .mood-item:hover {
+            transform: translateY(-2px);
+        }
+        .mood-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 150px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            flex: 1;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .stat-card {
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Mood History</h1>
+        <p class="subtitle">Track your emotional journey over time</p>
+        
+        <div id="statsContainer" class="stats-container">
+            <!-- Stats will be populated dynamically -->
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="moodChart"></canvas>
+        </div>
+        
+        <div id="loading" class="loading">Loading your mood data...</div>
+        <div id="error" class="error"></div>
+        
+        <div class="mood-legend" id="moodLegend">
+            <!-- Legend will be populated dynamically -->
+        </div>
+    </div>
+
+    <script>
+        // Function to format dates
+        function formatDate(dateString) {
+            const options = { month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+
+        // Initialize the chart with empty data
+        const ctx = document.getElementById('moodChart').getContext('2d');
+        const moodChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Mood Level',
+                    data: [], // Will be populated with {x: index, y: value} objects
+                    showLine: true,
+                    borderColor: 'rgba(200, 200, 200, 0.3)',
+                    backgroundColor: 'rgba(0, 0, 0, 0)',
+                    tension: 0.4,
+                    fill: false,
+                    pointBackgroundColor: function(context) {
+                        const index = context.dataIndex;
+                        return window.moodData?.colors?.[index] || 'rgba(75, 192, 192, 1)';
+                    },
+                    pointBorderColor: function(context) {
+                        const index = context.dataIndex;
+                        return window.moodData?.colors?.[index] || 'rgba(75, 192, 192, 1)';
+                    },
+                    pointRadius: 8,
+                    pointHoverRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 6,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                return ['', 'Very Low', 'Low', 'Neutral', 'Good', 'Excellent'][value] || '';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(200, 200, 200, 0.15)'
+                        }
+                    },
+                    x: {
+                        type: 'category',
+                        labels: [],
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: 10,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(context) {
+                                const moodIndex = context.dataIndex;
+                                const mood = window.moodData?.moods[moodIndex] || '';
+                                const note = window.moodData?.notes[moodIndex] || '';
+                                let label = `Mood: ${mood}`;
+                                if (note) {
+                                    label += `\nNote: ${note}`;
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false // Hide default legend as we'll create our own
+                    }
+                }
+            }
+        });
+
+        // Create a custom legend for moods
+        function createMoodLegend(moodData) {
+            if (!moodData || !moodData.moods || !moodData.colors) return;
+            
+            const legendContainer = document.getElementById('moodLegend');
+            legendContainer.innerHTML = ''; // Clear existing content
+            
+            // Get unique moods and their colors
+            const uniqueMoods = {};
+            moodData.moods.forEach((mood, index) => {
+                if (!uniqueMoods[mood]) {
+                    uniqueMoods[mood] = moodData.colors[index];
+                }
+            });
+            
+            // Create legend items
+            for (const mood in uniqueMoods) {
+                const item = document.createElement('div');
+                item.className = 'mood-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = 'mood-color';
+                colorBox.style.backgroundColor = uniqueMoods[mood];
+                
+                const label = document.createElement('span');
+                label.textContent = mood.charAt(0).toUpperCase() + mood.slice(1); // Capitalize first letter
+                
+                item.appendChild(colorBox);
+                item.appendChild(label);
+                legendContainer.appendChild(item);
+            }
+        }
+
+        // Create stats cards
+        function createMoodStats(moodData) {
+            if (!moodData || !moodData.moods) return;
+            
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = ''; // Clear existing content
+            
+            // Calculate stats
+            const totalEntries = moodData.moods.length;
+            
+            // Count mood frequencies
+            const moodCounts = {};
+            moodData.moods.forEach(mood => {
+                moodCounts[mood] = (moodCounts[mood] || 0) + 1;
+            });
+            
+            // Find most frequent mood
+            let mostFrequentMood = '';
+            let maxCount = 0;
+            for (const mood in moodCounts) {
+                if (moodCounts[mood] > maxCount) {
+                    maxCount = moodCounts[mood];
+                    mostFrequentMood = mood;
+                }
+            }
+            
+            // Calculate average mood value
+            const avgMoodValue = moodData.values.reduce((sum, val) => sum + val, 0) / moodData.values.length;
+            const avgMoodLabel = avgMoodValue >= 4 ? 'Good' : 
+                               avgMoodValue >= 3 ? 'Neutral' : 'Low';
+            
+            // Create stat cards
+            const stats = [
+                { label: 'Total Entries', value: totalEntries },
+                { label: 'Most Frequent', value: mostFrequentMood.charAt(0).toUpperCase() + mostFrequentMood.slice(1) },
+                { label: 'Average Mood', value: avgMoodLabel }
+            ];
+            
+            stats.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                
+                const value = document.createElement('div');
+                value.className = 'stat-value';
+                value.textContent = stat.value;
+                
+                const label = document.createElement('div');
+                label.className = 'stat-label';
+                label.textContent = stat.label;
+                
+                card.appendChild(value);
+                card.appendChild(label);
+                statsContainer.appendChild(card);
+            });
+        }
+
+        // Fetch and display mood data
+        async function fetchMoodData() {
+            try {
+                const response = await fetch('/get_moods');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch mood data');
+                }
+                
+                const data = await response.json();
+                window.moodData = data; // Store for tooltip access
+                
+                // Format dates for x-axis labels
+                const formattedDates = data.labels.map(formatDate);
+                
+                // Format data for scatter chart
+                const scatterData = data.values.map((value, index) => {
+                    return {
+                        x: index,
+                        y: value
+                    };
+                });
+                
+                // Update chart with new data
+                moodChart.options.scales.x.labels = formattedDates;
+                moodChart.data.datasets[0].data = scatterData;
+                
+                // Update chart to use the new data
+                moodChart.update();
+                
+                // Create custom legend
+                createMoodLegend(data);
+                
+                // Create stats section
+                createMoodStats(data);
+                
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error fetching mood data:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Failed to load mood data. Please try again later.';
+            }
+        }
+
+        // Load data when page loads
+        fetchMoodData();
+    </script>
+</body>
+</html> 

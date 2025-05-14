@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Therapist - Live Session</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #5B6EF5;
+            --secondary-color: #FF6B6B;
+            --bg-color: #F4F7FD;
+            --text-color: #2D3748;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .video-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+        }
+
+        .video-wrapper {
+            position: relative;
+            flex: 1;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #userVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .control-btn.muted {
+            background: var(--secondary-color);
+        }
+
+        .control-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .emotion-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .emotion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .emotion-header h2 {
+            margin: 0;
+            color: var(--text-color);
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .emotion-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .emotion-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .emotion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .emotion-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .emotion-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .emotion-insight {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .emotional-summary {
+            display: none;
+        }
+
+        .emotion-trend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #718096;
+        }
+
+        .trend-up { color: #48bb78; }
+        .trend-down { color: #f56565; }
+        .trend-stable { color: #4299e1; }
+
+        .emotion-chart-container {
+            display: none;
+        }
+
+        .feedback-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .feedback-text {
+            color: #2e7d32;
+            margin: 0;
+        }
+
+        #emotionCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .gesture-feedback {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: none;
+        }
+
+        .ai-response-box {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .ai-response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .ai-response-header h3 {
+            margin: 0;
+            color: var(--text-color);
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .ai-response-content {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #2D3748;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+
+        .ai-thinking {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6B7280;
+            font-style: italic;
+        }
+
+        .ai-thinking .dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .ai-thinking .dot {
+            width: 6px;
+            height: 6px;
+            background: #6B7280;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        .ai-thinking .dot:nth-child(2) { animation-delay: 0.2s; }
+        .ai-thinking .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.7); opacity: 0.5; }
+        }
+
+        .status-indicators {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: var(--text-color);
+        }
+
+        .status-item i {
+            font-size: 1.1em;
+        }
+
+        /* Add ripple effect for buttons */
+        .control-btn::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+
+        .control-btn:active::after {
+            transform: scale(0, 0);
+            opacity: .3;
+            transition: 0s;
+        }
+
+        /* Loading spinner for buttons */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .control-btn.loading::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .control-btn.loading i {
+            opacity: 0;
+        }
+
+        /* Add styles for button states */
+        .control-btn.muted {
+            background-color: var(--secondary-color);
+        }
+        .control-btn.active {
+            background-color: var(--primary-color);
+        }
+        .control-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        /* Add emergency alert styles */
+        .emergency-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            max-width: 500px;
+            width: 90%;
+            display: none;
+            animation: emergencyPulse 2s infinite;
+            border: 3px solid #e53e3e;
+        }
+
+        @keyframes emergencyPulse {
+            0% { box-shadow: 0 4px 20px rgba(229, 62, 62, 0.3); }
+            50% { box-shadow: 0 4px 30px rgba(229, 62, 62, 0.8); }
+            100% { box-shadow: 0 4px 20px rgba(229, 62, 62, 0.3); }
+        }
+
+        .emergency-alert h3 {
+            color: #e53e3e;
+            margin: 0 0 15px 0;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emergency-alert h3 i {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            50% { transform: translateX(0); }
+            75% { transform: translateX(3px); }
+            100% { transform: translateX(0); }
+        }
+
+        .emergency-alert p {
+            color: #4a5568;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .emergency-resources {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .resource-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .resource-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .resource-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .resource-contact {
+            color: #4a5568;
+            font-size: 0.95em;
+        }
+
+        .alert-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .alert-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .alert-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .alert-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .wellness-score {
+            background: linear-gradient(135deg, #4299e1 0%, #667eea 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .wellness-score h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.4em;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+
+        .score-value {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-status {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .substance-alert {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .substance-alert.visible {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="userVideo" autoplay playsinline></video>
+                <canvas id="emotionCanvas" width="640" height="480"></canvas>
+                <div class="gesture-feedback" id="gestureFeedback">
+                    Detected gesture: <span id="gestureText"></span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="control-btn" id="cameraToggle" title="Toggle Camera">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="control-btn" id="micToggle" title="Toggle Microphone">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="control-btn" id="startSession" title="Start/Stop Session">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+            <div class="status-indicators">
+                <div class="status-item">
+                    <i class="fas fa-video"></i> Camera: <span id="cameraStatus">Off</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-microphone"></i> Microphone: <span id="micStatus">Off</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-circle"></i> Session: <span id="sessionStatus">Stopped</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="emotion-panel">
+            <div class="emotion-header">
+                <h2>Emotional Analysis</h2>
+                <div id="sessionDuration">Session Duration: 00:00</div>
+            </div>
+            
+            <div class="wellness-score">
+                <h3>Wellness Score</h3>
+                <div class="score-value" id="wellnessScore">100</div>
+                <div class="score-status" id="wellnessStatus">Healthy</div>
+            </div>
+
+            <div class="substance-alert" id="substanceAlert">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="substanceMessage">Substance detected</span>
+            </div>
+            
+            <div class="ai-response-box">
+                <div class="ai-response-header">
+                    <h3>AI Therapist Response</h3>
+                    <div class="ai-thinking" id="aiThinking" style="display: none;">
+                        Processing
+                        <div class="dots">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ai-response-content" id="aiResponse">
+                    Start the session to begin our conversation. I'll analyze your emotions and provide supportive feedback.
+                </div>
+            </div>
+            
+            <div class="emotion-display">
+                <div class="emotion-card">
+                    <div class="emotion-name">
+                        <i class="fas fa-smile"></i>
+                        Positive Emotions
+                    </div>
+                    <div class="emotion-value" id="positiveValue">0%</div>
+                    <div class="emotion-insight" id="positiveInsight">
+                        Includes joy, contentment, and enthusiasm
+                    </div>
+                    <div class="emotion-trend">
+                        <span class="trend-indicator" id="positiveTrend">
+                            <i class="fas fa-minus"></i> Stable
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="emotion-card">
+                    <div class="emotion-name">
+                        <i class="fas fa-frown"></i>
+                        Stress Indicators
+                    </div>
+                    <div class="emotion-value" id="stressValue">0%</div>
+                    <div class="emotion-insight" id="stressInsight">
+                        Monitoring anxiety and tension levels
+                    </div>
+                    <div class="emotion-trend">
+                        <span class="trend-indicator" id="stressTrend">
+                            <i class="fas fa-minus"></i> Stable
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="emotion-card">
+                    <div class="emotion-name">
+                        <i class="fas fa-heart"></i>
+                        Emotional Engagement
+                    </div>
+                    <div class="emotion-value" id="engagementValue">0%</div>
+                    <div class="emotion-insight" id="engagementInsight">
+                        Level of emotional expression
+                    </div>
+                    <div class="emotion-trend">
+                        <span class="trend-indicator" id="engagementTrend">
+                            <i class="fas fa-minus"></i> Stable
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="emotion-card">
+                    <div class="emotion-name">
+                        <i class="fas fa-balance-scale"></i>
+                        Emotional Balance
+                    </div>
+                    <div class="emotion-value" id="balanceValue">0%</div>
+                    <div class="emotion-insight" id="balanceInsight">
+                        Overall emotional stability
+                    </div>
+                    <div class="emotion-trend">
+                        <span class="trend-indicator" id="balanceTrend">
+                            <i class="fas fa-minus"></i> Stable
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Face-API.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    
+    <script>
+        let isSessionActive = false;
+        let isCameraOn = false;
+        let isMicOn = false;
+        let mediaStream;
+        let recognition;
+        let modelsLoaded = false;
+        let buttons;
+        let emotionHistory = [];
+        let sessionStartTime = null;
+        let emotionUpdateInterval = null;
+        let wellnessScore = 100;
+        let substanceDetected = false;
+        let lastSubstanceAlert = 0;
+        const SUBSTANCE_ALERT_COOLDOWN = 10000; // 10 seconds
+        const WELLNESS_THRESHOLD = 40; // Show emergency resources below this score
+
+        // Initialize controls
+        function initializeControls() {
+            // Get button elements
+            const cameraToggle = document.getElementById('cameraToggle');
+            const micToggle = document.getElementById('micToggle');
+            const startSession = document.getElementById('startSession');
+
+            if (!cameraToggle || !micToggle || !startSession) {
+                console.error('Failed to find control buttons:', {
+                    cameraToggle: !!cameraToggle,
+                    micToggle: !!micToggle,
+                    startSession: !!startSession
+                });
+                throw new Error('Required control buttons not found');
+            }
+
+            // Store button references globally
+            buttons = { cameraToggle, micToggle, startSession };
+
+            // Add click handlers
+            cameraToggle.addEventListener('click', async () => {
+                try {
+                    await requestCamera();
+                } catch (error) {
+                    showError('Camera Error', error.message);
+                }
+            });
+
+            micToggle.addEventListener('click', async () => {
+                try {
+                    await requestMicrophone();
+                } catch (error) {
+                    showError('Microphone Error', error.message);
+                }
+            });
+
+            startSession.addEventListener('click', async () => {
+                try {
+                    await toggleSession();
+                } catch (error) {
+                    showError('Session Error', error.message);
+                }
+            });
+
+            // Initialize button states
+            updateButtonStates();
+        }
+
+        // Request camera access
+        async function requestCamera() {
+            try {
+                const videoElement = document.getElementById('userVideo');
+                if (!videoElement) {
+                    throw new Error('Video element not found');
+                }
+
+                // If we're turning off the camera
+                if (isCameraOn) {
+                    console.log('Turning off camera...');
+                    if (mediaStream) {
+                        const videoTracks = mediaStream.getVideoTracks();
+                        videoTracks.forEach(track => {
+                            track.stop();
+                        });
+                    }
+                    videoElement.srcObject = null;
+                    videoElement.style.display = 'none';
+                    isCameraOn = false;
+                } else {
+                    // We're turning on the camera
+                    console.log('Requesting camera permission...');
+                    
+                    // Stop any existing tracks first to prevent glitches
+                    if (mediaStream) {
+                        mediaStream.getVideoTracks().forEach(track => track.stop());
+                    }
+                    
+                    // Request new stream with only video
+                    const videoStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    // Create a new MediaStream if needed
+                    if (!mediaStream) {
+                        mediaStream = new MediaStream();
+                    } else {
+                        // Remove any existing video tracks
+                        mediaStream.getVideoTracks().forEach(track => {
+                            track.stop();
+                            mediaStream.removeTrack(track);
+                        });
+                    }
+                    
+                    // Add the new video track
+                    const videoTrack = videoStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        mediaStream.addTrack(videoTrack);
+                        
+                        // Set up video element
+                        videoElement.srcObject = mediaStream;
+                        videoElement.style.display = 'block';
+                        
+                        // Wait for video to be ready
+                        await new Promise((resolve, reject) => {
+                            videoElement.onloadedmetadata = resolve;
+                            videoElement.onerror = () => reject(new Error('Failed to load video'));
+                            setTimeout(() => reject(new Error('Video load timeout')), 5000);
+                        });
+                        
+                        await videoElement.play();
+                        
+                        // Set up canvas dimensions
+                        const canvas = document.getElementById('emotionCanvas');
+                        if (canvas) {
+                            const updateCanvasSize = () => {
+                                canvas.width = videoElement.offsetWidth;
+                                canvas.height = videoElement.offsetHeight;
+                            };
+                            
+                            updateCanvasSize();
+                            window.addEventListener('resize', updateCanvasSize);
+                        }
+                        
+                        isCameraOn = true;
+                        
+                        // Start emotion detection if session is active
+                        if (isSessionActive && modelsLoaded) {
+                            await startEmotionDetection();
+                        }
+                    }
+                }
+                
+                updateButtonStates();
+                console.log('Camera toggled:', isCameraOn ? 'on' : 'off');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                isCameraOn = false;
+                updateButtonStates();
+                throw new Error('Unable to access camera. Please check your permissions: ' + error.message);
+            }
+        }
+
+        // Request microphone access
+        async function requestMicrophone() {
+            try {
+                console.log('Attempting to toggle microphone...');
+                
+                // If we're turning off the mic
+                if (isMicOn) {
+                    console.log('Turning off microphone...');
+                    if (mediaStream) {
+                        const audioTracks = mediaStream.getAudioTracks();
+                        audioTracks.forEach(track => {
+                            track.stop();
+                            mediaStream.removeTrack(track);
+                        });
+                    }
+                    if (recognition) {
+                        recognition.stop();
+                    }
+                    isMicOn = false;
+                } else {
+                    // We're turning on the mic
+                    console.log('Requesting microphone access...');
+                    
+                    // Stop any existing audio tracks first to prevent glitches
+                    if (mediaStream) {
+                        mediaStream.getAudioTracks().forEach(track => {
+                            track.stop();
+                            mediaStream.removeTrack(track);
+                        });
+                    }
+                    
+                    // Request new audio-only stream
+                    const audioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        },
+                        video: false
+                    });
+                    
+                    // Create a new MediaStream if needed
+                    if (!mediaStream) {
+                        mediaStream = new MediaStream();
+                    }
+                    
+                    // Add the new audio track
+                    const audioTrack = audioStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        mediaStream.addTrack(audioTrack);
+                        
+                        // Initialize speech recognition
+                        initializeSpeechRecognition();
+                        if (isSessionActive && recognition) {
+                            try {
+                                recognition.stop(); // Stop any existing recognition first
+                                setTimeout(() => {
+                                    try {
+                                        recognition.start();
+                                        console.log('Speech recognition started');
+                                    } catch (e) {
+                                        console.warn('Speech recognition delayed start error:', e);
+                                    }
+                                }, 100);
+                            } catch (e) {
+                                console.warn('Speech recognition stop error:', e);
+                            }
+                        }
+                        
+                        isMicOn = true;
+                        console.log('Microphone initialized successfully');
+                    }
+                }
+                
+                updateButtonStates();
+                console.log('Microphone state updated:', isMicOn);
+            } catch (error) {
+                console.error('Microphone toggle error:', error);
+                isMicOn = false;
+                updateButtonStates();
+                throw error;
+            }
+        }
+
+        // Update button states
+        function updateButtonStates() {
+            if (!buttons) return;
+
+            const { cameraToggle, micToggle, startSession } = buttons;
+
+            // Update camera button
+            cameraToggle.innerHTML = isCameraOn ? 
+                '<i class="fas fa-video"></i>' : 
+                '<i class="fas fa-video-slash"></i>';
+            cameraToggle.classList.toggle('muted', !isCameraOn);
+            cameraToggle.title = isCameraOn ? 'Turn off camera' : 'Turn on camera';
+
+            // Update microphone button
+            micToggle.innerHTML = isMicOn ? 
+                '<i class="fas fa-microphone"></i>' : 
+                '<i class="fas fa-microphone-slash"></i>';
+            micToggle.classList.toggle('muted', !isMicOn);
+            micToggle.title = isMicOn ? 'Turn off microphone' : 'Turn on microphone';
+
+            // Update session button
+            startSession.innerHTML = isSessionActive ? 
+                '<i class="fas fa-stop"></i>' : 
+                '<i class="fas fa-play"></i>';
+            startSession.classList.toggle('active', isSessionActive);
+            startSession.title = isSessionActive ? 'End session' : 'Start session';
+            startSession.disabled = (!isCameraOn && !isMicOn) || !modelsLoaded;
+
+            // Update status indicators
+            const cameraStatus = document.getElementById('cameraStatus');
+            const micStatus = document.getElementById('micStatus');
+            const sessionStatus = document.getElementById('sessionStatus');
+
+            if (cameraStatus) {
+                cameraStatus.textContent = isCameraOn ? 'On' : 'Off';
+                cameraStatus.style.color = isCameraOn ? '#2ecc71' : '#e74c3c';
+            }
+
+            if (micStatus) {
+                micStatus.textContent = isMicOn ? 'On' : 'Off';
+                micStatus.style.color = isMicOn ? '#2ecc71' : '#e74c3c';
+            }
+
+            if (sessionStatus) {
+                sessionStatus.textContent = isSessionActive ? 'Active' : 'Stopped';
+                sessionStatus.style.color = isSessionActive ? '#2ecc71' : '#e74c3c';
+            }
+
+            console.log('States updated:', {
+                camera: isCameraOn,
+                microphone: isMicOn,
+                session: isSessionActive,
+                modelsLoaded
+            });
+        }
+
+        // Initialize speech recognition
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                console.log('Initializing speech recognition...');
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    console.log('Speech recognition started');
+                };
+
+                recognition.onend = function() {
+                    console.log('Speech recognition ended');
+                    // Restart if session is active and mic is on
+                    if (isSessionActive && isMicOn) {
+                        try {
+                            recognition.start();
+                            console.log('Restarting speech recognition');
+                        } catch (e) {
+                            console.warn('Could not restart speech recognition:', e);
+                        }
+                    }
+                };
+
+                recognition.onresult = function(event) {
+                    const last = event.results.length - 1;
+                    const transcript = event.results[last][0].transcript;
+                    console.log('Speech recognized:', transcript);
+                    processUserSpeech(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'no-speech') {
+                        console.log('No speech detected');
+                    } else {
+                        showError('Speech Recognition Error', 'There was an error with speech recognition: ' + event.error);
+                    }
+                };
+
+                console.log('Speech recognition initialized');
+            } else {
+                console.warn('Speech recognition not available');
+                showError('Browser Support', 'Speech recognition is not supported in your browser. Please use Chrome for the best experience.');
+            }
+        }
+
+        // Load face-api models
+        async function loadModels() {
+            try {
+                console.log('Starting model loading...');
+                
+                // Check if faceapi is available
+                if (typeof faceapi === 'undefined') {
+                    console.error('Face-API is not defined. Script may not have loaded properly.');
+                    throw new Error('Face detection library not available. Please refresh the page or check your internet connection.');
+                }
+                
+                // Try loading from CDN first with timeout
+                const CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+                console.log('Attempting to load models from CDN:', CDN_URL);
+                
+                try {
+                    const loadWithTimeout = async (promise, timeoutMs) => {
+                        let timeoutId;
+                        const timeoutPromise = new Promise((_, reject) => {
+                            timeoutId = setTimeout(() => reject(new Error('Loading timed out')), timeoutMs);
+                        });
+                        
+                        try {
+                            const result = await Promise.race([promise, timeoutPromise]);
+                            clearTimeout(timeoutId);
+                            return result;
+                        } catch (error) {
+                            clearTimeout(timeoutId);
+                            throw error;
+                        }
+                    };
+                    
+                    await loadWithTimeout(Promise.all([
+                        faceapi.nets.tinyFaceDetector.load(CDN_URL),
+                        faceapi.nets.faceExpressionNet.load(CDN_URL),
+                        faceapi.nets.faceLandmark68Net.load(CDN_URL)
+                    ]), 10000); // 10 second timeout
+                    
+                    console.log('Models loaded successfully from CDN');
+                    return;
+                } catch (cdnError) {
+                    console.warn('Failed to load models from CDN:', cdnError);
+                }
+                
+                // Fall back to local models
+                const LOCAL_URL = '/static/models';
+                console.log('Attempting to load models from local storage:', LOCAL_URL);
+                
+                try {
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(LOCAL_URL),
+                        faceapi.nets.faceExpressionNet.loadFromUri(LOCAL_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(LOCAL_URL)
+                    ]);
+                    
+                    console.log('Models loaded successfully from local storage');
+                } catch (localError) {
+                    console.error('Failed to load models from local storage:', localError);
+                    throw new Error('Unable to load required models. Please check your internet connection and refresh the page.');
+                }
+            } catch (error) {
+                console.error('Model loading error:', error);
+                throw new Error('Failed to load emotion detection models: ' + error.message);
+            }
+        }
+
+        // Start emotion detection
+        async function startEmotionDetection() {
+            if (!isSessionActive || !isCameraOn || !modelsLoaded) return;
+            
+            const video = document.getElementById('userVideo');
+            const canvas = document.getElementById('emotionCanvas');
+            
+            if (!video || !canvas) {
+                throw new Error('Required video or canvas elements not found');
+            }
+            
+            canvas.width = video.offsetWidth;
+            canvas.height = video.offsetHeight;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                throw new Error('Could not get canvas context');
+            }
+            
+            async function detect() {
+                if (!isSessionActive || !isCameraOn) return;
+                
+                try {
+                    const detections = await faceapi.detectAllFaces(video, 
+                        new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceExpressions();
+
+                    if (detections && detections.length > 0) {
+                        const detection = detections[0];
+                        
+                        // Update emotion values
+                        updateEmotionValues(detection.expressions);
+                        
+                        // Perform object detection for substances
+                        const detectedObjects = await performObjectDetection(video);
+                        
+                        // Update wellness score
+                        updateWellnessScore(detection.expressions, detectedObjects);
+                        
+                        // Draw face landmarks
+                        const displaySize = { 
+                            width: video.offsetWidth, 
+                            height: video.offsetHeight 
+                        };
+                        
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        const resizedDetections = faceapi.resizeResults(detection, displaySize);
+                        faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+                    }
+                    
+                    if (isSessionActive && isCameraOn) {
+                        requestAnimationFrame(detect);
+                    }
+                } catch (error) {
+                    console.error('Error in detection:', error);
+                    if (isSessionActive && isCameraOn) {
+                        requestAnimationFrame(detect);
+                    }
+                }
+            }
+            
+            detect();
+        }
+
+        // Update emotion values and provide insights
+        function updateEmotionValues(expressions) {
+            if (!isSessionActive) return;
+
+            // Calculate composite emotional metrics
+            const positiveEmotions = expressions.happy + expressions.surprised * 0.5;
+            const stressIndicators = expressions.angry + expressions.sad + expressions.fearful;
+            const emotionalEngagement = Object.values(expressions).reduce((a, b) => a + b, 0) / Object.keys(expressions).length;
+            const emotionalBalance = 1 - Math.abs(positiveEmotions - stressIndicators);
+
+            // Store emotion data point
+            const timestamp = Date.now();
+            emotionHistory.push({
+                timestamp,
+                positiveEmotions,
+                stressIndicators,
+                emotionalEngagement,
+                emotionalBalance,
+                rawExpressions: {...expressions}
+            });
+
+            // Keep last 5 minutes of data
+            const fiveMinutesAgo = timestamp - 5 * 60 * 1000;
+            emotionHistory = emotionHistory.filter(point => point.timestamp > fiveMinutesAgo);
+
+            // Calculate trends
+            const trends = calculateEmotionalTrends();
+
+            // Update emotion cards
+            updateEmotionCard('positive', positiveEmotions, trends.positive);
+            updateEmotionCard('stress', stressIndicators, trends.stress);
+            updateEmotionCard('engagement', emotionalEngagement, trends.engagement);
+            updateEmotionCard('balance', emotionalBalance, trends.balance);
+        }
+
+        // Calculate emotional trends
+        function calculateEmotionalTrends() {
+            if (emotionHistory.length < 2) {
+                return {
+                    positive: 'stable',
+                    stress: 'stable',
+                    engagement: 'stable',
+                    balance: 'stable'
+                };
+            }
+
+            const recent = emotionHistory.slice(-10);
+            const calculateTrend = (metric) => {
+                const values = recent.map(point => point[metric]);
+                const slope = (values[values.length - 1] - values[0]) / values.length;
+                return slope > 0.1 ? 'up' : slope < -0.1 ? 'down' : 'stable';
+            };
+
+            return {
+                positive: calculateTrend('positiveEmotions'),
+                stress: calculateTrend('stressIndicators'),
+                engagement: calculateTrend('emotionalEngagement'),
+                balance: calculateTrend('emotionalBalance')
+            };
+        }
+
+        // Update individual emotion card
+        function updateEmotionCard(type, value, trend) {
+            const percentage = Math.round(value * 100);
+            const valueElement = document.getElementById(`${type}Value`);
+            const trendElement = document.getElementById(`${type}Trend`);
+            const insightElement = document.getElementById(`${type}Insight`);
+
+            if (valueElement) {
+                valueElement.textContent = `${percentage}%`;
+            }
+
+            if (trendElement) {
+                let trendIcon, trendText;
+                switch (trend) {
+                    case 'up':
+                        trendIcon = '<i class="fas fa-arrow-up trend-up"></i>';
+                        trendText = 'Increasing';
+                        break;
+                    case 'down':
+                        trendIcon = '<i class="fas fa-arrow-down trend-down"></i>';
+                        trendText = 'Decreasing';
+                        break;
+                    default:
+                        trendIcon = '<i class="fas fa-minus trend-stable"></i>';
+                        trendText = 'Stable';
+                }
+                trendElement.innerHTML = `${trendIcon} ${trendText}`;
+            }
+
+            if (insightElement) {
+                // Update insights based on values and trends
+                let insight = '';
+                switch (type) {
+                    case 'positive':
+                        insight = percentage > 70 ? 'Strong positive emotional state'
+                               : percentage > 40 ? 'Moderate positive engagement'
+                               : 'Room for enhancing positive emotions';
+                        break;
+                    case 'stress':
+                        insight = percentage > 60 ? 'Consider stress management techniques'
+                               : percentage > 30 ? 'Moderate stress levels detected'
+                               : 'Healthy stress management';
+                        break;
+                    case 'engagement':
+                        insight = percentage > 70 ? 'High emotional expressiveness'
+                               : percentage > 40 ? 'Balanced emotional engagement'
+                               : 'Exploring emotional expression';
+                        break;
+                    case 'balance':
+                        insight = percentage > 70 ? 'Well-balanced emotional state'
+                               : percentage > 40 ? 'Maintaining emotional balance'
+                               : 'Working on emotional regulation';
+                        break;
+                }
+                insightElement.textContent = insight;
+            }
+        }
+
+        // Update session duration
+        function updateSessionDuration() {
+            if (!sessionStartTime || !isSessionActive) return;
+            
+            const durationElement = document.getElementById('sessionDuration');
+            if (!durationElement) return;
+
+            const now = Date.now();
+            const duration = now - sessionStartTime;
+            const minutes = Math.floor(duration / 60000);
+            const seconds = Math.floor((duration % 60000) / 1000);
+
+            durationElement.textContent = `Session Duration: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Start session timer and updates
+        function startSessionTracking() {
+            sessionStartTime = Date.now();
+            emotionHistory = [];
+            
+            // Update duration every second
+            emotionUpdateInterval = setInterval(() => {
+                updateSessionDuration();
+            }, 1000);
+        }
+
+        // Stop session tracking
+        function stopSessionTracking() {
+            sessionStartTime = null;
+            if (emotionUpdateInterval) {
+                clearInterval(emotionUpdateInterval);
+                emotionUpdateInterval = null;
+            }
+        }
+
+        // Process user speech
+        async function processUserSpeech(transcript) {
+            if (!isSessionActive || !transcript) return;
+
+            console.log('Processing speech:', transcript);
+            const aiThinking = document.getElementById('aiThinking');
+            const aiResponse = document.getElementById('aiResponse');
+            
+            try {
+                // Show thinking indicator
+                if (aiThinking) {
+                    aiThinking.style.display = 'flex';
+                }
+                
+                // Clear previous response
+                if (aiResponse) {
+                    aiResponse.textContent = 'Processing your message...';
+                }
+
+                const response = await fetch('/api/chats/current/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: transcript
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('AI Response:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Update AI response - handle both formats
+                if (aiResponse) {
+                    if (data.message && typeof data.message === 'object' && data.message.text) {
+                        // Format 1: message is an object with text property
+                        aiResponse.textContent = data.message.text;
+                    } else if (data.message && typeof data.message === 'string') {
+                        // Format 2: message is a string
+                        aiResponse.textContent = data.message;
+                    } else {
+                        // Default fallback
+                        aiResponse.textContent = "I'm here to listen. What would you like to talk about?";
+                    }
+                }
+
+                // Update wellness score if provided
+                if (typeof data.wellness_score !== 'undefined') {
+                    wellnessScore = data.wellness_score;
+                    updateWellnessDisplay(data.wellness_score, data.assessment_notes);
+                    
+                    // Show emergency alert if wellness score is low
+                    if (data.wellness_score < 40 || data.show_emergency) {
+                        showEmergencyAlert();
+                        
+                        // Add notification sound if browser supports it
+                        try {
+                            const audio = new Audio('/static/sounds/alert.mp3');
+                            audio.play().catch(e => console.log('Audio play error:', e));
+                        } catch (audioError) {
+                            console.log('Audio not supported:', audioError);
+                        }
+                    }
+                } else if (data.emotion) {
+                    // Generate a wellness score based on emotion
+                    const emotionScores = {
+                        'happy': 85,
+                        'excited': 90,
+                        'neutral': 70,
+                        'anxious': 40,
+                        'sad': 30,
+                        'angry': 35
+                    };
+                    const score = emotionScores[data.emotion] || 60;
+                    wellnessScore = score;
+                    updateWellnessDisplay(score, 'Based on detected emotion');
+                    
+                    // Show emergency alert if wellness score is low
+                    if (score < 40 || data.show_emergency) {
+                        showEmergencyAlert();
+                    }
+                }
+                
+                // Show emergency alert if explicitly flagged
+                if (data.show_emergency) {
+                    showEmergencyAlert();
+                }
+
+                // Update emotion values if provided
+                const emotion = data.detected_emotion || data.emotion || 'neutral';
+                const emotions = {
+                    happy: emotion === 'happy' ? 1 : 0,
+                    sad: emotion === 'sad' ? 1 : 0,
+                    angry: emotion === 'angry' ? 1 : 0,
+                    surprised: emotion === 'surprised' ? 1 : 0,
+                    neutral: emotion === 'neutral' ? 1 : 0
+                };
+                updateEmotionValues(emotions);
+            } catch (error) {
+                console.error('Error processing speech:', error);
+                if (aiResponse) {
+                    aiResponse.textContent = 'I apologize, but I encountered an issue. Please try speaking again.';
+                }
+            } finally {
+                // Hide thinking indicator
+                if (aiThinking) {
+                    aiThinking.style.display = 'none';
+                }
+            }
+        }
+
+        // Update wellness score display with assessment notes
+        function updateWellnessDisplay(score, notes) {
+            const scoreElement = document.getElementById('wellnessScore');
+            const statusElement = document.getElementById('wellnessStatus');
+            
+            if (scoreElement) {
+                scoreElement.textContent = Math.round(score);
+            }
+            
+            if (statusElement) {
+                if (score >= 80) {
+                    statusElement.textContent = 'Excellent';
+                    statusElement.style.color = '#48bb78';
+                } else if (score >= 60) {
+                    statusElement.textContent = 'Good';
+                    statusElement.style.color = '#4299e1';
+                } else if (score >= 40) {
+                    statusElement.textContent = 'Fair';
+                    statusElement.style.color = '#ecc94b';
+                } else {
+                    statusElement.textContent = 'Needs Support';
+                    statusElement.style.color = '#f56565';
+                }
+            }
+        }
+
+        // Start/Stop session
+        async function toggleSession() {
+            console.log('Toggling session...');
+            try {
+                const wasActive = isSessionActive;
+                isSessionActive = !isSessionActive;
+                
+                const aiResponse = document.getElementById('aiResponse');
+                const aiThinking = document.getElementById('aiThinking');
+                const emotionalSummary = document.getElementById('emotionalSummary');
+                
+                if (isSessionActive) {
+                    console.log('Starting session...');
+                    // Pre-session checks
+                    if (!modelsLoaded) {
+                        isSessionActive = false;
+                        throw new Error('Face detection models not loaded. Please wait or refresh the page.');
+                    }
+                    
+                    // Start session tracking
+                    startSessionTracking();
+                    
+                    // Ensure media streams are properly initialized
+                    if (isCameraOn || isMicOn) {
+                        // If we have no mediaStream but camera or mic is supposed to be on, reinitialize them
+                        if (!mediaStream) {
+                            mediaStream = new MediaStream();
+                            
+                            // Reinitialize camera if needed
+                            if (isCameraOn) {
+                                try {
+                                    await requestCamera();
+                                } catch (e) {
+                                    console.warn('Failed to initialize camera:', e);
+                                    isCameraOn = false;
+                                }
+                            }
+                            
+                            // Reinitialize mic if needed
+                            if (isMicOn) {
+                                try {
+                                    await requestMicrophone();
+                                } catch (e) {
+                                    console.warn('Failed to initialize microphone:', e);
+                                    isMicOn = false;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Start emotion detection if camera is on
+                    if (isCameraOn) {
+                        console.log('Starting emotion detection...');
+                        try {
+                            await startEmotionDetection();
+                        } catch (e) {
+                            console.warn('Failed to start emotion detection:', e);
+                        }
+                    }
+                    
+                    // Start speech recognition if mic is on
+                    if (isMicOn && recognition) {
+                        try {
+                            console.log('Starting speech recognition...');
+                            recognition.stop(); // Stop first to prevent errors
+                            setTimeout(() => {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.warn('Speech recognition delayed start error:', e);
+                                }
+                            }, 100);
+                        } catch (e) {
+                            console.warn('Speech recognition start error:', e);
+                        }
+                    }
+                    
+                    // Update UI
+                    if (aiResponse) {
+                        aiResponse.textContent = 'Session started. I\'m here to listen and support you...';
+                    }
+                    
+                    if (emotionalSummary) {
+                        emotionalSummary.textContent = 'Beginning to analyze your emotional patterns...';
+                    }
+                    
+                    if (aiThinking) {
+                        aiThinking.style.display = 'none';
+                    }
+                } else {
+                    console.log('Stopping session...');
+                    // Stop session components
+                    if (wasActive) {
+                        // Stop session tracking
+                        stopSessionTracking();
+                        
+                        // Stop emotion detection
+                        try {
+                            await stopEmotionDetection();
+                        } catch (e) {
+                            console.warn('Error stopping emotion detection:', e);
+                        }
+                        
+                        // Stop speech recognition
+                        if (recognition) {
+                            try {
+                                recognition.stop();
+                            } catch (e) {
+                                console.warn('Error stopping speech recognition:', e);
+                            }
+                        }
+                        
+                        // Update UI
+                        if (aiResponse) {
+                            aiResponse.textContent = 'Session ended. You can start a new session when you\'re ready.';
+                        }
+                        
+                        // Reset emotion displays
+                        resetEmotionDisplays();
+                    }
+                }
+                
+                // Update button states after everything else
+                updateButtonStates();
+            } catch (error) {
+                console.error('Session toggle error:', error);
+                // Revert session state if there was an error
+                isSessionActive = wasActive;
+                updateButtonStates();
+                throw error;
+            }
+        }
+
+        // Reset all emotion displays
+        function resetEmotionDisplays() {
+            // Reset emotion cards
+            const emotionTypes = ['positive', 'stress', 'engagement', 'balance'];
+            emotionTypes.forEach(type => {
+                const valueElement = document.getElementById(`${type}Value`);
+                const trendElement = document.getElementById(`${type}Trend`);
+                const insightElement = document.getElementById(`${type}Insight`);
+
+                if (valueElement) valueElement.textContent = '0%';
+                if (trendElement) trendElement.innerHTML = '<i class="fas fa-minus trend-stable"></i> Stable';
+                if (insightElement) {
+                    switch (type) {
+                        case 'positive':
+                            insightElement.textContent = 'Includes joy, contentment, and enthusiasm';
+                            break;
+                        case 'stress':
+                            insightElement.textContent = 'Monitoring anxiety and tension levels';
+                            break;
+                        case 'engagement':
+                            insightElement.textContent = 'Level of emotional expression';
+                            break;
+                        case 'balance':
+                            insightElement.textContent = 'Overall emotional stability';
+                            break;
+                    }
+                }
+            });
+
+            // Reset canvas
+            const canvas = document.getElementById('emotionCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            // Reset wellness score
+            const wellnessScoreElement = document.getElementById('wellnessScore');
+            const wellnessStatusElement = document.getElementById('wellnessStatus');
+            if (wellnessScoreElement) wellnessScoreElement.textContent = '100';
+            if (wellnessStatusElement) {
+                wellnessStatusElement.textContent = 'Healthy';
+                wellnessStatusElement.style.color = '#48bb78';
+            }
+
+            // Hide substance alert if visible
+            const substanceAlert = document.getElementById('substanceAlert');
+            if (substanceAlert) substanceAlert.style.display = 'none';
+
+            // Reset AI thinking indicator
+            const aiThinking = document.getElementById('aiThinking');
+            if (aiThinking) aiThinking.style.display = 'none';
+
+            // Reset emotional summary if it exists
+            const emotionalSummary = document.getElementById('emotionalSummary');
+            if (emotionalSummary) {
+                emotionalSummary.textContent = 'Session complete. Start a new session to begin emotional analysis.';
+            }
+        }
+
+        // Stop emotion detection
+        async function stopEmotionDetection() {
+            const canvas = document.getElementById('emotionCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            
+            // Reset emotion values
+            const elements = ['happiness', 'sadness', 'anger', 'surprise'];
+            elements.forEach(emotion => {
+                const element = document.getElementById(`${emotion}Value`);
+                if (element) {
+                    element.textContent = '0%';
+                    element.style.color = 'var(--text-color)';
+                }
+            });
+            
+            // Clear chart
+            if (emotionChart) {
+                emotionChart.data.labels = [];
+                emotionChart.data.datasets.forEach(dataset => dataset.data = []);
+                emotionChart.update();
+            }
+
+            // Reset confidence score
+            const confidenceScore = document.getElementById('confidenceScore');
+            if (confidenceScore) {
+                confidenceScore.textContent = 'Confidence: 0%';
+            }
+        }
+
+        // Show error message
+        function showError(title, message) {
+            console.error(title + ':', message);
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.textContent = `${title}: ${message}`;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            } else {
+                alert(`${title}: ${message}`);
+            }
+        }
+
+        // Initialize everything when the document loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('Starting initialization...');
+                
+                // Initialize buttons first
+                initializeControls();
+                console.log('Controls initialized');
+
+                // Wait for face-api to be ready
+                if (typeof faceapi === 'undefined') {
+                    console.log('Waiting for face-api to load...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                if (typeof faceapi === 'undefined') {
+                    throw new Error('face-api failed to load');
+                }
+
+                // Load face-api models
+                await loadModels();
+                console.log('Models loaded successfully');
+                modelsLoaded = true;
+
+                // Update button states after initialization
+                updateButtonStates();
+                console.log('Initialization complete');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Initialization Error', error.message);
+            }
+        });
+
+        // Add emergency alert HTML
+        const emergencyAlertHTML = `
+            <div class="emergency-alert" id="emergencyAlert">
+                <button class="close-button" onclick="dismissEmergencyAlert()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+                <h3><i class="fas fa-exclamation-triangle"></i> Mental Health Support</h3>
+                <p>Based on our analysis, we want to make sure you have access to immediate support if needed. Your mental health and wellbeing are important.</p>
+                <div class="emergency-resources">
+                    <div class="resource-item">
+                        <div class="resource-name">988 Suicide & Crisis Lifeline</div>
+                        <div class="resource-contact">Call or text 988 - Available 24/7</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-name">Crisis Text Line</div>
+                        <div class="resource-contact">Text HOME to 741741</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-name">SAMHSA National Helpline</div>
+                        <div class="resource-contact">1-800-662-HELP (4357)</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-name">Veterans Crisis Line</div>
+                        <div class="resource-contact">Call 988, Press 1</div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-name">Disaster Distress Helpline</div>
+                        <div class="resource-contact">1-800-985-5990</div>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; font-style: italic;">Remember, seeking help is a sign of strength, not weakness.</p>
+                <div class="alert-buttons">
+                    <button class="alert-button alert-secondary" onclick="dismissEmergencyAlert()">Dismiss</button>
+                    <button class="alert-button alert-primary" onclick="getHelp()">Call 988 Now</button>
+                    <button class="alert-button" style="background-color: #4a5568; color: white;" onclick="dismissEmergencyAlert()">Continue Session</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', emergencyAlertHTML);
+
+        // Show emergency alert
+        function showEmergencyAlert() {
+            try {
+                // Remove any existing alerts first
+                dismissEmergencyAlert();
+                
+                // Get or create alert element
+                let alertElement = document.getElementById('emergencyAlert');
+                if (!alertElement) {
+                    // Recreate the alert if it doesn't exist
+                    document.body.insertAdjacentHTML('beforeend', emergencyAlertHTML);
+                    alertElement = document.getElementById('emergencyAlert');
+                }
+                
+                if (alertElement) {
+                    // Show the alert
+                    alertElement.style.display = 'block';
+                    
+                    // Add background overlay with click handler to dismiss
+                    const overlay = document.createElement('div');
+                    overlay.id = 'emergencyOverlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                    overlay.style.zIndex = '999';
+                    
+                    // Add click handler to dismiss when clicking outside the alert
+                    overlay.addEventListener('click', function(event) {
+                        // Only dismiss if clicking directly on the overlay (not its children)
+                        if (event.target === overlay) {
+                            dismissEmergencyAlert();
+                        }
+                    });
+                    
+                    document.body.appendChild(overlay);
+                    
+                    // Set z-index of alert to be higher than overlay
+                    alertElement.style.zIndex = '1000';
+                    
+                    // Ensure alert is centered and visible
+                    alertElement.style.position = 'fixed';
+                    alertElement.style.top = '50%';
+                    alertElement.style.left = '50%';
+                    alertElement.style.transform = 'translate(-50%, -50%)';
+                    
+                    // Add keyboard handler for Escape key
+                    document.addEventListener('keydown', function escHandler(e) {
+                        if (e.key === 'Escape') {
+                            dismissEmergencyAlert();
+                            document.removeEventListener('keydown', escHandler);
+                        }
+                    });
+                    
+                    // Add a timeout to auto-dismiss after 2 minutes if no interaction
+                    setTimeout(() => {
+                        if (document.getElementById('emergencyAlert')) {
+                            console.log('Auto-dismissing emergency alert after timeout');
+                            dismissEmergencyAlert();
+                        }
+                    }, 120000); // 2 minutes
+                    
+                    // Log that emergency resources were shown
+                    console.log('Emergency resources displayed to user');
+                }
+            } catch (error) {
+                console.error('Error showing emergency alert:', error);
+            }
+        }
+
+        // Dismiss emergency alert
+        function dismissEmergencyAlert() {
+            try {
+                // Get elements
+                const alertElement = document.getElementById('emergencyAlert');
+                const overlay = document.getElementById('emergencyOverlay');
+                
+                // Remove alert if it exists
+                if (alertElement) {
+                    alertElement.style.display = 'none';
+                }
+                
+                // Remove overlay if it exists
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+                
+                // Check for any other elements that might be blocking the UI
+                const blockers = document.querySelectorAll('.emergency-alert, [id^="emergency"]');
+                blockers.forEach(elem => {
+                    if (elem.style) {
+                        elem.style.display = 'none';
+                    }
+                    if (elem !== alertElement && elem !== overlay && elem.parentNode) {
+                        try {
+                            elem.parentNode.removeChild(elem);
+                        } catch (e) {
+                            console.warn('Could not remove element:', e);
+                        }
+                    }
+                });
+                
+                // Make sure body and html are scrollable
+                document.body.style.overflow = 'auto';
+                document.documentElement.style.overflow = 'auto';
+                
+                console.log('Emergency alert dismissed, website should be accessible now');
+            } catch (error) {
+                console.error('Error in dismissEmergencyAlert:', error);
+                // Fallback method - extreme case
+                const alerts = document.querySelectorAll('.emergency-alert, #emergencyOverlay, [id^="emergency"]');
+                alerts.forEach(elem => {
+                    if (elem && elem.parentNode) {
+                        elem.parentNode.removeChild(elem);
+                    }
+                });
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Handle get help button click
+        function getHelp() {
+            // Open crisis hotline in new tab
+            window.open('tel:988', '_blank');
+            
+            // Log that user clicked "Get Help"
+            console.log('User clicked to get emergency help');
+        }
+
+        // Perform object detection for substances
+        async function performObjectDetection(video) {
+            // This is a placeholder for actual object detection
+            // In a real implementation, you would use a proper object detection model
+            // For now, we'll simulate detection based on random events
+            
+            const detectedObjects = [];
+            const substances = ['cigarette', 'bottle', 'wine glass', 'joint'];
+            
+            // Simulate random substance detection (remove in production)
+            if (Math.random() < 0.05) { // 5% chance of detection
+                detectedObjects.push(substances[Math.floor(Math.random() * substances.length)]);
+            }
+            
+            return detectedObjects;
+        }
+    </script>
+</body>
+</html> 
